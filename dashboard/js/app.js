@@ -1,5 +1,5 @@
 /**
- * Main Application & SPA Controller with Daily Progress & Issue Input
+ * Main Application & SPA Controller with Week-Issue Matching & Navigation
  */
 
 class AppController {
@@ -18,10 +18,13 @@ class AppController {
     // Initialize components
     this.renderMonthTabs();
     this.renderActiveMonthCurriculum();
+    
     window.githubManager.fetchIssues().then(() => {
+      this.renderActiveMonthCurriculum(); // Re-render curriculum so week-matched issues display!
       this.renderAllIssuesAndLogs();
       this.renderLatestLogs();
     });
+    
     window.songManager.renderSongPipeline('song-pipeline-container');
     this.updateDashboardStats();
   }
@@ -129,6 +132,46 @@ class AppController {
     this.renderActiveMonthCurriculum();
   }
 
+  /**
+   * Match GitHub Issues and local logs for a specific Month and Week
+   */
+  getIssuesForWeek(monthNum, weekNum) {
+    const allIssues = [
+      ...this.localDailyLogs.map(log => ({
+        id: `local_${log.id}`,
+        number: log.id,
+        title: log.title,
+        body: log.body,
+        created_at: log.created_at,
+        html_url: '#',
+        state: 'completed',
+        isLocal: true,
+        labels: [{ name: log.tag || '学習ログ', color: '00f2fe' }]
+      })),
+      ...(window.githubManager.issues || [])
+    ];
+
+    const weekPattern1 = `Month ${monthNum} Week ${weekNum}`.toLowerCase();
+    const weekPattern2 = `Week ${weekNum}`.toLowerCase();
+
+    return allIssues.filter(issue => {
+      const titleLower = (issue.title || '').toLowerCase();
+      const bodyLower = (issue.body || '').toLowerCase();
+      const labels = (issue.labels || []).map(l => (l.name || '').toLowerCase());
+
+      // Check title or body match for Week W / Month M Week W
+      if (titleLower.includes(weekPattern1) || titleLower.includes(weekPattern2)) return true;
+      if (labels.includes(weekPattern2) || labels.includes(`week${weekNum}`)) return true;
+
+      // Special check: if Month 1 and week 1, match Month 1 issue with Week 1 in title/body
+      if (labels.includes(`month ${monthNum}`) && (titleLower.includes(`week ${weekNum}`) || bodyLower.includes(`week ${weekNum}`))) {
+        return true;
+      }
+
+      return false;
+    });
+  }
+
   renderActiveMonthCurriculum() {
     const container = document.getElementById('curriculum-month-detail');
     if (!container || !this.curriculumData) return;
@@ -151,6 +194,25 @@ class AppController {
     html += monthData.weeks.map(w => {
       const wId = `m${monthData.month}_w${w.week}`;
       const customNote = this.customWeeklyNotes[wId] || '';
+      const matchedIssues = this.getIssuesForWeek(monthData.month, w.week);
+
+      const matchedIssuesHtml = matchedIssues.length > 0 ? matchedIssues.map(issue => `
+        <div style="background: rgba(255,255,255,0.04); border-left: 3px solid var(--primary-cyan); border-radius: var(--radius-sm); padding: 8px 10px; margin-top: 6px; font-size: 0.82rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <a href="${issue.html_url}" target="${issue.isLocal ? '_self' : '_blank'}" style="color: #ffffff; font-weight: 600; text-decoration: none;">
+              ${issue.isLocal ? '[ローカル]' : `#${issue.number}`} ${this.escapeHtml(issue.title)}
+            </a>
+            <span style="font-size: 0.72rem; color: var(--text-muted);">${new Date(issue.created_at).toLocaleDateString('ja-JP')}</span>
+          </div>
+          <p style="color: var(--text-muted); margin-top: 4px; font-size: 0.78rem; line-height: 1.4;">
+            ${this.escapeHtml((issue.body || '').slice(0, 120))}${(issue.body || '').length > 120 ? '...' : ''}
+          </p>
+        </div>
+      `).join('') : `
+        <p style="color: var(--text-dim); font-size: 0.78rem; font-style: italic; margin-top: 4px;">
+          まだ登録されたIssueログはありません。「＋ この週のログを入力」またはChatGPTから登録できます。
+        </p>
+      `;
 
       return `
         <div class="week-card">
@@ -159,10 +221,16 @@ class AppController {
               <span class="week-badge">Week ${w.week}</span>
               <h3 style="display: inline; font-size: 1.05rem; margin-left: 8px; color: #ffffff;">${w.title}</h3>
             </div>
-            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" 
-              onclick="window.app.openNewLogModalWithWeek(${monthData.month}, ${w.week})">
-              ＋ この週のログを入力
-            </button>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" 
+                onclick="window.app.filterIssuesForWeek(${monthData.month}, ${w.week})">
+                🔍 Issue一覧で検索
+              </button>
+              <button class="btn btn-primary" style="padding: 4px 10px; font-size: 0.75rem;" 
+                onclick="window.app.openNewLogModalWithWeek(${monthData.month}, ${w.week})">
+                ＋ ログを入力
+              </button>
+            </div>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 14px 0;">
@@ -190,6 +258,16 @@ class AppController {
               onchange="window.app.updateWeeklyNote('${wId}', this.value)">
           </div>
 
+          <!-- Associated Week GitHub Issues & Logs -->
+          <div style="background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-size: 0.82rem; font-weight: 600; color: var(--primary-cyan);">
+                📌 今週の関連Issue・日々の学習ログ (${matchedIssues.length}件)
+              </span>
+            </div>
+            ${matchedIssuesHtml}
+          </div>
+
           <!-- Task Checkbox -->
           <div style="border-top: 1px dashed var(--border-color); padding-top: 10px; margin-top: 10px;">
             <h4 style="font-size: 0.82rem; color: var(--accent-green); margin-bottom: 6px;">実践・課題クリア</h4>
@@ -204,6 +282,15 @@ class AppController {
     }).join('');
 
     container.innerHTML = html;
+  }
+
+  filterIssuesForWeek(monthNum, weekNum) {
+    this.switchView('issues');
+    const searchInput = document.getElementById('issue-search-input');
+    if (searchInput) {
+      searchInput.value = `Week ${weekNum}`;
+      this.renderAllIssuesAndLogs(`Week ${weekNum}`, 'all');
+    }
   }
 
   updateWeeklyNote(weekId, text) {
@@ -236,7 +323,6 @@ class AppController {
     const container = document.getElementById('github-issues-container');
     if (!container) return;
 
-    // Combine local daily logs + GitHub API issues
     let combinedLogs = [
       ...this.localDailyLogs.map(log => ({
         id: `local_${log.id}`,
@@ -269,7 +355,7 @@ class AppController {
     if (combinedLogs.length === 0) {
       container.innerHTML = `
         <div style="text-align: center; padding: 40px; color: var(--text-muted);">
-          <p>該当する学習ログ・Issueは見つかりませんでした。「＋ 新規ログ・Issue入力」から追加できます。</p>
+          <p>該当する学習ログ・Issueは見つかりませんでした。「＋ 新規ログ入力」から追加できます。</p>
         </div>
       `;
       return;
@@ -341,7 +427,7 @@ class AppController {
     if (select) select.value = `Month ${monthNum} Week ${weekNum}`;
     
     const titleInput = document.getElementById('log-title-input');
-    if (titleInput) titleInput.value = `Month ${monthNum} Week ${weekNum} 学習ログ`;
+    if (titleInput) titleInput.value = `[Month ${monthNum} Week ${weekNum}] 日次学習ログ`;
 
     this.openNewLogModal();
   }
@@ -364,7 +450,7 @@ class AppController {
 
     const newLog = {
       id: Date.now(),
-      title: `${weekSelect ? `[${weekSelect}] ` : ''}${title}`,
+      title: title.startsWith('[') ? title : `[${weekSelect}] ${title}`,
       tag,
       body,
       created_at: new Date().toISOString()
@@ -378,6 +464,7 @@ class AppController {
     document.getElementById('log-body-input').value = '';
 
     // Refresh views
+    this.renderActiveMonthCurriculum();
     this.renderAllIssuesAndLogs();
     this.renderLatestLogs();
     alert('学習ログを保存しました！');
@@ -388,7 +475,7 @@ class AppController {
     const title = document.getElementById('log-title-input')?.value || '学習ログ';
     const body = document.getElementById('log-body-input')?.value || '';
 
-    const fullTitle = encodeURIComponent(`${weekSelect ? `[${weekSelect}] ` : ''}${title}`);
+    const fullTitle = encodeURIComponent(title.startsWith('[') ? title : `[${weekSelect}] ${title}`);
     const fullBody = encodeURIComponent(body);
     const url = `https://github.com/tomoaki16/songwriting-study/issues/new?title=${fullTitle}&body=${fullBody}`;
     window.open(url, '_blank');
@@ -405,7 +492,7 @@ class AppController {
   }
 
   copyPromptTemplate() {
-    const promptText = `【本日の1時間作曲学習ログ】\n・対象：Month ${this.activeMonth}\n・学習テーマ：\n・学んだ理論・気づき：\n・分析した既存曲：\n・Studio One / ギターでの実践内容：\n・自作曲への応用アイデア：\n\n上記についてGitHub Issue登録・振り返りフィードバックをお願いします。`;
+    const promptText = `【本日の1時間作曲学習ログ】\n・対象: Month ${this.activeMonth}\n・タイトル: [Month ${this.activeMonth} Week X] \n・学習テーマ：\n・学んだ理論・気づき：\n・分析した既存曲：\n・Studio One / ギターでの実践内容：\n・自作曲への応用アイデア：\n\n上記についてGitHub Issue ([Month ${this.activeMonth} Week X] 形式のタイトル) の登録・更新およびフィードバックをお願いします。`;
     navigator.clipboard.writeText(promptText);
     alert('ChatGPT用学習ログプロンプトをコピーしました！');
   }
