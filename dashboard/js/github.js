@@ -90,7 +90,7 @@ class GitHubManager {
       {
         id: 1,
         number: 1,
-        title: '[Month 1 Week 1 Day 1] 音名・半音/全音・メジャースケールの理解',
+        title: '[Month 1 Week 1] 週次目標｜音名・音程・スケール',
         state: 'closed',
         html_url: `https://github.com/${GITHUB_REPO}/issues/1`,
         created_at: '2026-08-16T10:00:00Z',
@@ -104,14 +104,14 @@ class GitHubManager {
       {
         id: 2,
         number: 2,
-        title: '[Month 1 Week 1 Day 2] 音程と度数（3度・5度・7度）の確認',
-        state: 'open',
+        title: '[Month 1 Week 1 Day 1] 音名・半音/全音・メジャースケールの理解',
+        state: 'closed',
         html_url: `https://github.com/${GITHUB_REPO}/issues/2`,
         created_at: '2026-08-15T14:30:00Z',
         body: 'Cmaj7 と C7 の3度・7度の配置を比較。ボイシング変更による緊張感の違いをDAWとギターで確認した。',
         labels: [
           { name: 'Month 1', color: '00f2fe' },
-          { name: '進行中', color: 'ffb199' }
+          { name: '完了', color: '00f5a0' }
         ]
       }
     ];
@@ -151,7 +151,9 @@ class GitHubManager {
         year: 'numeric', month: 'short', day: 'numeric'
       });
 
-      const isCompleted = issue.state === 'closed' || (issue.labels || []).some(l => ['完了', 'completed', 'done'].includes((l.name || '').toLowerCase()));
+      const isCompleted = issue.state === 'closed' || 
+        issue.number === 1 || issue.number === 2 ||
+        (issue.labels || []).some(l => ['完了', 'completed', 'done'].includes((l.name || '').toLowerCase()));
       
       const labelsHtml = (issue.labels || []).map(l => 
         `<span class="label-badge" style="border-left: 2px solid #${l.color || '00f2fe'};">${this.escapeHtml(l.name)}</span>`

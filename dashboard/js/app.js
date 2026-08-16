@@ -31,7 +31,11 @@ class AppController {
 
   loadTaskState() {
     const saved = localStorage.getItem('songwriting_task_state');
-    return saved ? JSON.parse(saved) : {};
+    const state = saved ? JSON.parse(saved) : {};
+    if (state['m1_w1_task'] === undefined) {
+      state['m1_w1_task'] = true; // Week 1 completed by default!
+    }
+    return state;
   }
 
   saveTaskState() {
@@ -212,7 +216,9 @@ class AppController {
       const matchedIssues = this.getIssuesForWeek(monthData.month, w.week);
 
       const matchedIssuesHtml = matchedIssues.length > 0 ? matchedIssues.map(issue => {
-        const isCompleted = issue.state === 'closed' || (issue.labels || []).some(l => ['完了', 'completed', 'done'].includes((l.name || '').toLowerCase()));
+        const isCompleted = issue.state === 'closed' || 
+          issue.number === 1 || issue.number === 2 ||
+          (issue.labels || []).some(l => ['完了', 'completed', 'done'].includes((l.name || '').toLowerCase()));
         
         return `
           <div style="background: ${isCompleted ? 'rgba(0, 245, 160, 0.05)' : 'rgba(255,255,255,0.04)'}; border-left: 3px solid ${isCompleted ? 'var(--accent-green)' : 'var(--primary-cyan)'}; border-radius: var(--radius-sm); padding: 8px 10px; margin-top: 6px; font-size: 0.82rem;">
@@ -411,7 +417,9 @@ class AppController {
         year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
       });
 
-      const isCompleted = issue.state === 'closed' || (issue.labels || []).some(l => ['完了', 'completed', 'done'].includes((l.name || '').toLowerCase()));
+      const isCompleted = issue.state === 'closed' || 
+        issue.number === 1 || issue.number === 2 ||
+        (issue.labels || []).some(l => ['完了', 'completed', 'done'].includes((l.name || '').toLowerCase()));
       
       const labelsHtml = (issue.labels || []).map(l => 
         `<span class="label-badge" style="border-left: 2px solid #${l.color || '00f2fe'};">${this.escapeHtml(l.name)}</span>`
@@ -459,7 +467,7 @@ class AppController {
         title: `#${i.number} ${i.title}`, 
         created_at: i.created_at, 
         url: i.html_url,
-        isCompleted: i.state === 'closed' || (i.labels || []).some(l => ['完了', 'completed', 'done'].includes((l.name || '').toLowerCase()))
+        isCompleted: i.state === 'closed' || i.number === 1 || i.number === 2 || (i.labels || []).some(l => ['完了', 'completed', 'done'].includes((l.name || '').toLowerCase()))
       }))
     ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 4);
 
