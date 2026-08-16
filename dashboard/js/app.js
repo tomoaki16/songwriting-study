@@ -1,5 +1,5 @@
 /**
- * Main Application & SPA Controller with Week-Issue Matching & Navigation
+ * Main Application & SPA Controller with Week-Issue Matching & Day 1->2->3 Chronological Sorting
  */
 
 class AppController {
@@ -134,6 +134,7 @@ class AppController {
 
   /**
    * Match GitHub Issues and local logs for a specific Month and Week
+   * Sorted chronologically from top to bottom (Day 1 -> Day 2 -> Day 3)
    */
   getIssuesForWeek(monthNum, weekNum) {
     const allIssues = [
@@ -154,7 +155,7 @@ class AppController {
     const weekPattern1 = `Month ${monthNum} Week ${weekNum}`.toLowerCase();
     const weekPattern2 = `Week ${weekNum}`.toLowerCase();
 
-    return allIssues.filter(issue => {
+    const filtered = allIssues.filter(issue => {
       const titleLower = (issue.title || '').toLowerCase();
       const bodyLower = (issue.body || '').toLowerCase();
       const labels = (issue.labels || []).map(l => (l.name || '').toLowerCase());
@@ -169,6 +170,22 @@ class AppController {
       }
 
       return false;
+    });
+
+    // Sort ascending: Day 1 -> Day 2 -> Day 3 (small day number / oldest issue first)
+    return filtered.sort((a, b) => {
+      const matchA = (a.title.match(/Day\s*(\d+)/i) || a.body.match(/Day\s*(\d+)/i) || [])[1];
+      const matchB = (b.title.match(/Day\s*(\d+)/i) || b.body.match(/Day\s*(\d+)/i) || [])[1];
+
+      if (matchA && matchB) {
+        return parseInt(matchA, 10) - parseInt(matchB, 10);
+      }
+      if (matchA) return -1;
+      if (matchB) return 1;
+
+      const numA = typeof a.number === 'number' ? a.number : a.id;
+      const numB = typeof b.number === 'number' ? b.number : b.id;
+      return numA - numB;
     });
   }
 
@@ -198,14 +215,14 @@ class AppController {
 
       const matchedIssuesHtml = matchedIssues.length > 0 ? matchedIssues.map(issue => `
         <div style="background: rgba(255,255,255,0.04); border-left: 3px solid var(--primary-cyan); border-radius: var(--radius-sm); padding: 8px 10px; margin-top: 6px; font-size: 0.82rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px;">
             <a href="${issue.html_url}" target="${issue.isLocal ? '_self' : '_blank'}" style="color: #ffffff; font-weight: 600; text-decoration: none;">
               ${issue.isLocal ? '[ローカル]' : `#${issue.number}`} ${this.escapeHtml(issue.title)}
             </a>
             <span style="font-size: 0.72rem; color: var(--text-muted);">${new Date(issue.created_at).toLocaleDateString('ja-JP')}</span>
           </div>
-          <p style="color: var(--text-muted); margin-top: 4px; font-size: 0.78rem; line-height: 1.4;">
-            ${this.escapeHtml((issue.body || '').slice(0, 120))}${(issue.body || '').length > 120 ? '...' : ''}
+          <p style="color: var(--text-muted); margin-top: 4px; font-size: 0.78rem; line-height: 1.4; white-space: pre-wrap;">
+            ${this.escapeHtml((issue.body || '').slice(0, 150))}${(issue.body || '').length > 150 ? '...' : ''}
           </p>
         </div>
       `).join('') : `
@@ -258,11 +275,11 @@ class AppController {
               onchange="window.app.updateWeeklyNote('${wId}', this.value)">
           </div>
 
-          <!-- Associated Week GitHub Issues & Logs -->
+          <!-- Associated Week GitHub Issues & Logs (Sorted Day 1 -> Day 2 -> Day 3) -->
           <div style="background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
               <span style="font-size: 0.82rem; font-weight: 600; color: var(--primary-cyan);">
-                📌 今週の関連Issue・日々の学習ログ (${matchedIssues.length}件)
+                📌 今週の関連Issue・日々の学習ログ (${matchedIssues.length}件 / Day 1 ➔ Day 7 順)
               </span>
             </div>
             ${matchedIssuesHtml}
@@ -361,6 +378,22 @@ class AppController {
       return;
     }
 
+    // If searching for a week, sort ascending (Day 1 -> Day 2 -> Day 3)
+    if (searchTerm.toLowerCase().includes('week')) {
+      combinedLogs.sort((a, b) => {
+        const matchA = (a.title.match(/Day\s*(\d+)/i) || a.body.match(/Day\s*(\d+)/i) || [])[1];
+        const matchB = (b.title.match(/Day\s*(\d+)/i) || b.body.match(/Day\s*(\d+)/i) || [])[1];
+
+        if (matchA && matchB) return parseInt(matchA, 10) - parseInt(matchB, 10);
+        if (matchA) return -1;
+        if (matchB) return 1;
+
+        const numA = typeof a.number === 'number' ? a.number : a.id;
+        const numB = typeof b.number === 'number' ? b.number : b.id;
+        return numA - numB;
+      });
+    }
+
     container.innerHTML = combinedLogs.map(issue => {
       const dateStr = new Date(issue.created_at).toLocaleDateString('ja-JP', {
         year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -427,7 +460,7 @@ class AppController {
     if (select) select.value = `Month ${monthNum} Week ${weekNum}`;
     
     const titleInput = document.getElementById('log-title-input');
-    if (titleInput) titleInput.value = `[Month ${monthNum} Week ${weekNum}] 日次学習ログ`;
+    if (titleInput) titleInput.value = `[Month ${monthNum} Week ${weekNum} Day 1] 日次学習ログ`;
 
     this.openNewLogModal();
   }
@@ -492,7 +525,7 @@ class AppController {
   }
 
   copyPromptTemplate() {
-    const promptText = `【本日の1時間作曲学習ログ】\n・対象: Month ${this.activeMonth}\n・タイトル: [Month ${this.activeMonth} Week X] \n・学習テーマ：\n・学んだ理論・気づき：\n・分析した既存曲：\n・Studio One / ギターでの実践内容：\n・自作曲への応用アイデア：\n\n上記についてGitHub Issue ([Month ${this.activeMonth} Week X] 形式のタイトル) の登録・更新およびフィードバックをお願いします。`;
+    const promptText = `【本日の1時間作曲学習ログ】\n・対象: Month ${this.activeMonth}\n・タイトル: [Month ${this.activeMonth} Week X Day Y] \n・学習テーマ：\n・学んだ理論・気づき：\n・分析した既存曲：\n・Studio One / ギターでの実践内容：\n・自作曲への応用アイデア：\n\n上記についてGitHub Issue ([Month ${this.activeMonth} Week X Day Y] 形式のタイトル) の登録・更新およびフィードバックをお願いします。`;
     navigator.clipboard.writeText(promptText);
     alert('ChatGPT用学習ログプロンプトをコピーしました！');
   }
