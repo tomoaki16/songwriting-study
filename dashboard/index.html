@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>6か月作曲学習ダッシュボード｜Songwriting Study Hub</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-container">
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar">
+    <div class="brand-header">
+      <div class="brand-icon">🎵</div>
+      <div>
+        <div class="brand-title">Songwriting Hub</div>
+        <div class="brand-subtitle">6か月作曲学習計画</div>
+      </div>
+    </div>
+
+    <ul class="nav-menu">
+      <li class="nav-item active">
+        <button data-view="dashboard">
+          <span class="nav-icon">📊</span>
+          <span>ダッシュボード</span>
+        </button>
+      </li>
+      <li class="nav-item">
+        <button data-view="curriculum">
+          <span class="nav-icon">📅</span>
+          <span>6か月カリキュラム</span>
+        </button>
+      </li>
+      <li class="nav-item">
+        <button data-view="issues">
+          <span class="nav-icon">📝</span>
+          <span>学習ログ & Issues</span>
+        </button>
+      </li>
+      <li class="nav-item">
+        <button data-view="songs">
+          <span class="nav-icon">🎸</span>
+          <span>5曲制作パイプライン</span>
+        </button>
+      </li>
+      <li class="nav-item">
+        <button data-view="notes">
+          <span class="nav-icon">💡</span>
+          <span>理論・分析メモ</span>
+        </button>
+      </li>
+      <li class="nav-item">
+        <button data-view="settings">
+          <span class="nav-icon">⚙️</span>
+          <span>設定・連携</span>
+        </button>
+      </li>
+    </ul>
+
+    <div class="sidebar-footer">
+      <div class="github-sync-card">
+        <div class="sync-status">
+          <span class="pulse-dot"></span>
+          <span>GitHub Live Sync</span>
+        </div>
+        <div style="color: var(--text-dim); font-size: 0.72rem;">tomoaki16/songwriting-study</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Top Header Bar -->
+    <header class="top-bar">
+      <div>
+        <h1 class="page-title" id="page-title">ダッシュボード Overview</h1>
+        <p class="page-subtitle">1日1時間｜理論・分析・実践・応用・振り返りを回し、オリジナル5曲を完成させる</p>
+      </div>
+      <div class="actions-group">
+        <button class="btn btn-secondary" onclick="window.app.openPromptModal()">
+          <span>🤖</span> ChatGPTログ作成
+        </button>
+        <a href="https://github.com/tomoaki16/songwriting-study/issues/new" target="_blank" class="btn btn-primary">
+          <span>＋</span> Issueを立てる
+        </a>
+      </div>
+    </header>
+
+    <!-- Panel 1: Dashboard Overview -->
+    <section id="view-dashboard" class="view-panel active">
+      <div class="dashboard-grid">
+        <!-- Stat Widgets -->
+        <div class="card col-4">
+          <div class="stat-widget">
+            <div class="stat-icon cyan">📅</div>
+            <div>
+              <div class="stat-value" id="overall-progress-percent">0%</div>
+              <div class="stat-label">カリキュラム達成度 (24 Weeks)</div>
+            </div>
+          </div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" id="overall-progress-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <div class="card col-4">
+          <div class="stat-widget">
+            <div class="stat-icon purple">🎸</div>
+            <div>
+              <div class="stat-value" id="stat-completed-songs">0 / 5</div>
+              <div class="stat-label">完成オリジナル楽曲</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card col-4">
+          <div class="stat-widget">
+            <div class="stat-icon green">⚡</div>
+            <div>
+              <div class="stat-value">1 hr / day</div>
+              <div class="stat-label">目標学習ペース (週7時間上限)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Latest Issues / Logs -->
+        <div class="card col-8">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <h3 style="font-size: 1.1rem; color: #ffffff;">最近の学習ログ・Issue (GitHub)</h3>
+            <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;" onclick="window.app.switchView('issues')">すべて見る</button>
+          </div>
+          <div id="dashboard-latest-logs">
+            <p style="color: var(--text-muted);">読み込み中...</p>
+          </div>
+        </div>
+
+        <!-- 5-Song Quick Status -->
+        <div class="card col-4">
+          <h3 style="font-size: 1.1rem; color: #ffffff; margin-bottom: 16px;">5曲のロードマップ</h3>
+          <ul style="list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 0.88rem;">
+            <li style="display: flex; justify-content: space-between;"><span>Song 01 (Idea)</span> <span style="color: var(--primary-cyan);">Month 2〜4</span></li>
+            <li style="display: flex; justify-content: space-between;"><span>Song 02 (Backlog)</span> <span style="color: var(--text-muted);">Month 3〜5</span></li>
+            <li style="display: flex; justify-content: space-between;"><span>Song 03 (Backlog)</span> <span style="color: var(--text-muted);">Month 4〜6</span></li>
+            <li style="display: flex; justify-content: space-between;"><span>Song 04 (Backlog)</span> <span style="color: var(--text-muted);">Month 5〜6</span></li>
+            <li style="display: flex; justify-content: space-between;"><span>Song 05 (Backlog)</span> <span style="color: var(--text-muted);">Month 5〜6</span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Panel 2: Curriculum Plan Viewer -->
+    <section id="view-curriculum" class="view-panel">
+      <!-- Month Tabs -->
+      <div class="month-selector" id="month-tab-container"></div>
+      
+      <!-- Curriculum Detail -->
+      <div id="curriculum-month-detail"></div>
+    </section>
+
+    <!-- Panel 3: GitHub Issues & Daily Logs -->
+    <section id="view-issues" class="view-panel">
+      <div class="issue-filter-bar">
+        <input type="text" id="issue-search-input" class="search-input" placeholder="ログ・キーワードを検索（例: ダイアトニック, メロディ, ドラム...）">
+        <select id="issue-label-select" class="search-input" style="max-width: 180px;">
+          <option value="all">すべてのラベル</option>
+          <option value="理論">理論</option>
+          <option value="分析">分析</option>
+          <option value="実践">実践</option>
+          <option value="学習ログ">学習ログ</option>
+        </select>
+        <button class="btn btn-secondary" onclick="window.githubManager.fetchIssues().then(()=>window.githubManager.renderIssues('github-issues-container'))">
+          🔄 最新を取得
+        </button>
+      </div>
+
+      <div id="github-issues-container">
+        <p style="color: var(--text-muted);">GitHub Issues を取得中...</p>
+      </div>
+    </section>
+
+    <!-- Panel 4: 5-Song Pipeline -->
+    <section id="view-songs" class="view-panel">
+      <div class="card" style="margin-bottom: 24px;">
+        <h3 style="font-size: 1.1rem; color: #ffffff; margin-bottom: 8px;">オリジナル曲 5曲カンバン・パイプライン</h3>
+        <p style="color: var(--text-muted); font-size: 0.88rem;">アイデアから骨格制作、フルアレンジ、録音・ミックス、完成までトラック進行を管理します。</p>
+      </div>
+      
+      <div id="song-pipeline-container" class="song-pipeline-grid"></div>
+    </section>
+
+    <!-- Panel 5: Study Notes -->
+    <section id="view-notes" class="view-panel">
+      <div class="dashboard-grid">
+        <div class="card col-6">
+          <h3 style="font-size: 1.1rem; color: var(--primary-cyan); margin-bottom: 12px;">🎵 音楽理論クイックリファレンス</h3>
+          <ul style="padding-left: 20px; line-height: 1.8; color: var(--text-muted); font-size: 0.9rem;">
+            <li><strong>メジャースケール:</strong> 全 - 全 - 半 - 全 - 全 - 全 - 半</li>
+            <li><strong>三和音:</strong> Major (1-3-5), Minor (1-♭3-5), Dim (1-♭3-♭5), Aug (1-3-♯5)</li>
+            <li><strong>7thコード:</strong> maj7 (1-3-5-7), 7 (1-3-5-♭7), m7 (1-♭3-5-♭7), m7♭5 (1-♭3-♭5-♭7)</li>
+            <li><strong>コード機能:</strong> Tonic (安定/解決), Subdominant (移動/展開), Dominant (緊張/ドミナントモーション)</li>
+          </ul>
+        </div>
+        <div class="card col-6">
+          <h3 style="font-size: 1.1rem; color: var(--accent-purple); margin-bottom: 12px;">🥁 アレンジ・バンド構成ノート</h3>
+          <ul style="padding-left: 20px; line-height: 1.8; color: var(--text-muted); font-size: 0.9rem;">
+            <li><strong>ドラム:</strong> Kick (表拍/リズム核), Snare (2・4拍), Hi-hat (8/16分刻み), Fill (セクション繋ぎ)</li>
+            <li><strong>ベース:</strong> ルート維持 / 5度・経過音 / キックとの同期（動かしすぎない）</li>
+            <li><strong>ギター:</strong> ストローク過多回避。リフ, アルペジオ, 空間音色での役割分担</li>
+            <li><strong>ミックス優先順位:</strong> 1.音量 → 2.Pan → 3.EQ → 4.Comp → 5.Reverb/Delay</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Panel 6: Settings -->
+    <section id="view-settings" class="view-panel">
+      <div class="card col-8">
+        <h3 style="font-size: 1.1rem; color: #ffffff; margin-bottom: 16px;">GitHub & VPS 連携設定</h3>
+        <div class="form-group">
+          <label class="form-label">GitHub Personal Access Token (PAT) [オプション]</label>
+          <input type="password" id="pat-input" class="form-control" placeholder="ghp_xxxxxxxxxxxx" value="">
+          <small style="color: var(--text-dim); display: block; margin-top: 4px;">プライベートリポジトリ参照やAPI制限回避用に、ブラウザローカルストレージへ保存します。</small>
+        </div>
+        <button class="btn btn-primary" onclick="window.githubManager.setToken(document.getElementById('pat-input').value); alert('Tokenを保存しました');">
+          Tokenを保存
+        </button>
+
+        <hr style="border-color: var(--border-color); margin: 24px 0;">
+
+        <h4 style="font-size: 1rem; color: var(--primary-cyan); margin-bottom: 12px;">VPS デプロイ方法</h4>
+        <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.6;">
+          本ダッシュボードは純粋な静的ファイル（HTML/CSS/JS）です。既存VPS（Nginx / Apache / Docker）の <code>/var/www/songwriting-dashboard</code> または指定ドキュメントルートへ展開してアクセス可能です。
+        </p>
+        <pre class="mono-font" style="background: rgba(0,0,0,0.4); padding: 12px; border-radius: var(--radius-sm); margin-top: 12px; font-size: 0.82rem; color: var(--accent-green);">
+# VPS上でのクローン・配置例
+git clone https://github.com/tomoaki16/songwriting-study.git
+cd songwriting-study/dashboard
+chmod +x vps/deploy.sh
+./vps/deploy.sh
+        </pre>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Modal: ChatGPT Prompt Generator -->
+<div id="prompt-modal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 style="color: #ffffff; font-size: 1.2rem;">🤖 ChatGPT連携用 ログ作成テンプレート</h3>
+      <button class="modal-close-btn" onclick="window.app.closePromptModal()">✕</button>
+    </div>
+    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px;">
+      以下のテンプレートをコピーし、ChatGPTとの対話で使用してください。1日の学習内容を伝えることで、Issue化やフィードバックをスムーズに行えます。
+    </p>
+    <div class="form-group">
+      <textarea id="prompt-template-area" class="form-control" readonly style="height: 180px; font-family: monospace; font-size: 0.85rem;">
+【本日の1時間作曲学習ログ】
+・日付 / Week：
+・学習テーマ：
+・学んだ理論・気づき：
+・分析した既存曲：
+・Studio One / ギターでの実践内容：
+・自作曲への応用アイデア：
+
+上記についてGitHub Issue登録・振り返りフィードバックをお願いします。
+      </textarea>
+    </div>
+    <div style="display: flex; justify-content: flex-end; gap: 12px;">
+      <button class="btn btn-secondary" onclick="window.app.closePromptModal()">閉じる</button>
+      <button class="btn btn-primary" onclick="window.app.copyPromptTemplate()">コピーする</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/github.js"></script>
+<script src="js/songs.js"></script>
+<script src="js/curriculum.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
