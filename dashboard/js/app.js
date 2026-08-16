@@ -1,5 +1,5 @@
 /**
- * Main Application & SPA Controller
+ * Main Application & SPA Controller with Daily Progress & Issue Input
  */
 
 class AppController {
@@ -7,6 +7,8 @@ class AppController {
     this.curriculumData = null;
     this.activeMonth = 1;
     this.checkedTasks = this.loadTaskState();
+    this.customWeeklyNotes = this.loadCustomWeeklyNotes();
+    this.localDailyLogs = this.loadLocalDailyLogs();
   }
 
   async init() {
@@ -17,7 +19,7 @@ class AppController {
     this.renderMonthTabs();
     this.renderActiveMonthCurriculum();
     window.githubManager.fetchIssues().then(() => {
-      window.githubManager.renderIssues('github-issues-container');
+      this.renderAllIssuesAndLogs();
       this.renderLatestLogs();
     });
     window.songManager.renderSongPipeline('song-pipeline-container');
@@ -33,6 +35,24 @@ class AppController {
     localStorage.setItem('songwriting_task_state', JSON.stringify(this.checkedTasks));
   }
 
+  loadCustomWeeklyNotes() {
+    const saved = localStorage.getItem('songwriting_weekly_notes');
+    return saved ? JSON.parse(saved) : {};
+  }
+
+  saveCustomWeeklyNotes() {
+    localStorage.setItem('songwriting_weekly_notes', JSON.stringify(this.customWeeklyNotes));
+  }
+
+  loadLocalDailyLogs() {
+    const saved = localStorage.getItem('songwriting_local_logs');
+    return saved ? JSON.parse(saved) : [];
+  }
+
+  saveLocalDailyLogs() {
+    localStorage.setItem('songwriting_local_logs', JSON.stringify(this.localDailyLogs));
+  }
+
   async loadCurriculum() {
     try {
       const res = await fetch('data/curriculum.json');
@@ -45,7 +65,7 @@ class AppController {
   setupEventListeners() {
     // Navigation tabs
     document.querySelectorAll('.nav-item button').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', () => {
         const view = btn.dataset.view;
         this.switchView(view);
       });
@@ -56,7 +76,7 @@ class AppController {
     if (searchInput) {
       searchInput.addEventListener('input', (e) => {
         const labelFilter = document.getElementById('issue-label-select')?.value || 'all';
-        window.githubManager.renderIssues('github-issues-container', null, e.target.value, labelFilter);
+        this.renderAllIssuesAndLogs(e.target.value, labelFilter);
       });
     }
 
@@ -64,7 +84,7 @@ class AppController {
     if (labelSelect) {
       labelSelect.addEventListener('change', (e) => {
         const searchTerm = document.getElementById('issue-search-input')?.value || '';
-        window.githubManager.renderIssues('github-issues-container', null, searchTerm, e.target.value);
+        this.renderAllIssuesAndLogs(searchTerm, e.target.value);
       });
     }
   }
@@ -82,7 +102,7 @@ class AppController {
     const pageTitle = document.getElementById('page-title');
     const titleMap = {
       'dashboard': 'ダッシュボード Overview',
-      'curriculum': '6か月カリキュラム・実施計画',
+      'curriculum': '6か月カリキュラム・週間目標',
       'issues': '日々の学習ログ・GitHub Issues',
       'songs': '5曲制作パイプライン',
       'notes': '作曲理論・分析メモ ノート',
@@ -117,12 +137,12 @@ class AppController {
     if (!monthData) return;
 
     let html = `
-      <div class="card" style="margin-bottom: 24px;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+      <div class="card" style="margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
           <div>
-            <span class="week-badge" style="margin-bottom: 8px; display: inline-block;">Month ${monthData.month}</span>
-            <h2 style="font-size: 1.4rem; color: #ffffff;">${monthData.title}</h2>
-            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 6px; line-height: 1.5;">${monthData.goal}</p>
+            <span class="week-badge" style="margin-bottom: 6px;">Month ${monthData.month}</span>
+            <h2 style="font-size: 1.3rem; color: #ffffff;">${monthData.title}</h2>
+            <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 4px; line-height: 1.5;">${monthData.goal}</p>
           </div>
         </div>
       </div>
@@ -130,36 +150,53 @@ class AppController {
 
     html += monthData.weeks.map(w => {
       const wId = `m${monthData.month}_w${w.week}`;
+      const customNote = this.customWeeklyNotes[wId] || '';
 
       return `
         <div class="week-card">
           <div class="week-header">
             <div>
               <span class="week-badge">Week ${w.week}</span>
-              <h3 style="display: inline; font-size: 1.1rem; margin-left: 10px; color: #ffffff;">${w.title}</h3>
+              <h3 style="display: inline; font-size: 1.05rem; margin-left: 8px; color: #ffffff;">${w.title}</h3>
             </div>
+            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" 
+              onclick="window.app.openNewLogModalWithWeek(${monthData.month}, ${w.week})">
+              ＋ この週のログを入力
+            </button>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 14px 0;">
             <div>
-              <h4 style="font-size: 0.85rem; color: var(--primary-cyan); margin-bottom: 8px;">理論・学習項目</h4>
-              <ul style="padding-left: 18px; color: var(--text-muted); font-size: 0.88rem; line-height: 1.6;">
+              <h4 style="font-size: 0.85rem; color: var(--primary-cyan); margin-bottom: 6px;">理論・学習項目</h4>
+              <ul style="padding-left: 16px; color: var(--text-muted); font-size: 0.85rem; line-height: 1.6;">
                 ${w.topics.map(t => `<li>${t}</li>`).join('')}
               </ul>
             </div>
             <div>
-              <h4 style="font-size: 0.85rem; color: var(--accent-purple); margin-bottom: 8px;">分析＆ギター接続</h4>
-              <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 6px;"><strong>分析:</strong> ${w.analysis}</p>
-              ${w.guitar ? `<ul style="padding-left: 18px; color: var(--text-muted); font-size: 0.85rem;">${w.guitar.map(g=>`<li>${g}</li>`).join('')}</ul>` : ''}
+              <h4 style="font-size: 0.85rem; color: var(--accent-purple); margin-bottom: 6px;">分析＆ギター接続</h4>
+              <p style="color: var(--text-muted); font-size: 0.82rem; margin-bottom: 4px;"><strong>分析:</strong> ${w.analysis}</p>
+              ${w.guitar ? `<ul style="padding-left: 16px; color: var(--text-muted); font-size: 0.82rem;">${w.guitar.map(g=>`<li>${g}</li>`).join('')}</ul>` : ''}
             </div>
           </div>
 
-          <div style="border-top: 1px dashed var(--border-color); padding-top: 12px; margin-top: 12px;">
-            <h4 style="font-size: 0.85rem; color: var(--accent-green); margin-bottom: 8px;">実践・課題タスク</h4>
+          <!-- Weekly Custom Goal / Personal Memo -->
+          <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <span style="font-size: 0.78rem; font-weight: 600; color: var(--accent-amber);">✍️ 今週の個人民標・一筆メモ</span>
+            </div>
+            <input type="text" class="form-control" style="font-size: 0.82rem; padding: 6px 10px;" 
+              placeholder="例: Cメジャーのサビ進行3パターン作成を目標にする" 
+              value="${this.escapeHtml(customNote)}"
+              onchange="window.app.updateWeeklyNote('${wId}', this.value)">
+          </div>
+
+          <!-- Task Checkbox -->
+          <div style="border-top: 1px dashed var(--border-color); padding-top: 10px; margin-top: 10px;">
+            <h4 style="font-size: 0.82rem; color: var(--accent-green); margin-bottom: 6px;">実践・課題クリア</h4>
             <div class="task-item">
               <input type="checkbox" id="${wId}_task" ${this.checkedTasks[wId] ? 'checked' : ''} 
                 onchange="window.app.toggleTask('${wId}', this.checked)">
-              <label for="${wId}_task" style="cursor: pointer;">${w.practice}</label>
+              <label for="${wId}_task" style="cursor: pointer; font-size: 0.85rem;">${w.practice}</label>
             </div>
           </div>
         </div>
@@ -169,6 +206,11 @@ class AppController {
     container.innerHTML = html;
   }
 
+  updateWeeklyNote(weekId, text) {
+    this.customWeeklyNotes[weekId] = text;
+    this.saveCustomWeeklyNotes();
+  }
+
   toggleTask(taskId, isChecked) {
     this.checkedTasks[taskId] = isChecked;
     this.saveTaskState();
@@ -176,9 +218,8 @@ class AppController {
   }
 
   updateDashboardStats() {
-    // Total checked tasks count
     const totalChecked = Object.values(this.checkedTasks).filter(Boolean).length;
-    const totalWeeks = 24; // 24 weeks
+    const totalWeeks = 24;
     const progressPercent = Math.min(100, Math.round((totalChecked / totalWeeks) * 100));
 
     const percentEl = document.getElementById('overall-progress-percent');
@@ -186,31 +227,171 @@ class AppController {
     if (percentEl) percentEl.textContent = `${progressPercent}%`;
     if (fillEl) fillEl.style.width = `${progressPercent}%`;
 
-    // Completed songs count
     const completedSongs = window.songManager.songs.filter(s => s.status === 'completed').length;
     const completedSongsEl = document.getElementById('stat-completed-songs');
     if (completedSongsEl) completedSongsEl.textContent = `${completedSongs} / 5`;
+  }
+
+  renderAllIssuesAndLogs(searchTerm = '', labelFilter = 'all') {
+    const container = document.getElementById('github-issues-container');
+    if (!container) return;
+
+    // Combine local daily logs + GitHub API issues
+    let combinedLogs = [
+      ...this.localDailyLogs.map(log => ({
+        id: `local_${log.id}`,
+        number: log.id,
+        title: log.title,
+        body: log.body,
+        created_at: log.created_at,
+        html_url: '#',
+        state: 'completed',
+        isLocal: true,
+        labels: [{ name: log.tag || '学習ログ', color: '00f2fe' }]
+      })),
+      ...(window.githubManager.issues || [])
+    ];
+
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      combinedLogs = combinedLogs.filter(item => 
+        item.title.toLowerCase().includes(term) || 
+        (item.body && item.body.toLowerCase().includes(term))
+      );
+    }
+
+    if (labelFilter !== 'all') {
+      combinedLogs = combinedLogs.filter(item => 
+        item.labels && item.labels.some(l => l.name.toLowerCase() === labelFilter.toLowerCase())
+      );
+    }
+
+    if (combinedLogs.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+          <p>該当する学習ログ・Issueは見つかりませんでした。「＋ 新規ログ・Issue入力」から追加できます。</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = combinedLogs.map(issue => {
+      const dateStr = new Date(issue.created_at).toLocaleDateString('ja-JP', {
+        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+      
+      const labelsHtml = (issue.labels || []).map(l => 
+        `<span class="label-badge" style="border-left: 2px solid #${l.color || '00f2fe'};">${l.name}</span>`
+      ).join('');
+
+      return `
+        <div class="issue-card">
+          <div class="issue-header">
+            <div>
+              <span class="label-badge" style="background: ${issue.isLocal ? 'rgba(0, 245, 160, 0.2)' : 'rgba(0, 242, 254, 0.15)'}; color: ${issue.isLocal ? 'var(--accent-green)' : 'var(--primary-cyan)'};">
+                ${issue.isLocal ? 'LOCAL LOG' : `ISSUE #${issue.number}`}
+              </span>
+              <a href="${issue.html_url}" target="${issue.isLocal ? '_self' : '_blank'}" class="issue-title" style="margin-left: 6px;">
+                ${window.githubManager.escapeHtml(issue.title)}
+              </a>
+            </div>
+            <span class="issue-number">${dateStr}</span>
+          </div>
+          <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.5; margin: 8px 0; white-space: pre-wrap;">${window.githubManager.escapeHtml(issue.body)}</p>
+          <div class="issue-labels">
+            ${labelsHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
   }
 
   renderLatestLogs() {
     const container = document.getElementById('dashboard-latest-logs');
     if (!container) return;
 
-    const latest = window.githubManager.issues.slice(0, 3);
-    if (latest.length === 0) {
-      container.innerHTML = `<p style="color: var(--text-muted); font-size: 0.9rem;">最新のログはありません。</p>`;
+    const all = [
+      ...this.localDailyLogs.map(l => ({ title: l.title, created_at: l.created_at, url: '#' })),
+      ...(window.githubManager.issues || []).map(i => ({ title: `#${i.number} ${i.title}`, created_at: i.created_at, url: i.html_url }))
+    ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 4);
+
+    if (all.length === 0) {
+      container.innerHTML = `<p style="color: var(--text-muted); font-size: 0.88rem;">登録されたログはありません。「＋ 新規ログ・Issue入力」から追加できます。</p>`;
       return;
     }
 
-    container.innerHTML = latest.map(issue => `
-      <div style="padding: 12px; background: rgba(255,255,255,0.03); border-radius: var(--radius-md); margin-bottom: 8px;">
-        <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
-          <a href="${issue.html_url}" target="_blank" style="color: var(--primary-cyan); font-weight: 600; text-decoration: none;">
-            #${issue.number} ${issue.title}
-          </a>
-        </div>
+    container.innerHTML = all.map(item => `
+      <div style="padding: 10px 12px; background: rgba(255,255,255,0.03); border-radius: var(--radius-md); margin-bottom: 6px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+        <a href="${item.url}" target="_blank" style="color: var(--primary-cyan); font-weight: 600; text-decoration: none;">
+          ${this.escapeHtml(item.title)}
+        </a>
+        <span style="font-size: 0.75rem; color: var(--text-dim);">${new Date(item.created_at).toLocaleDateString('ja-JP')}</span>
       </div>
     `).join('');
+  }
+
+  /* Log Input Modal Handler */
+  openNewLogModal() {
+    const modal = document.getElementById('new-log-modal');
+    if (modal) modal.classList.add('active');
+  }
+
+  openNewLogModalWithWeek(monthNum, weekNum) {
+    const select = document.getElementById('log-week-select');
+    if (select) select.value = `Month ${monthNum} Week ${weekNum}`;
+    
+    const titleInput = document.getElementById('log-title-input');
+    if (titleInput) titleInput.value = `Month ${monthNum} Week ${weekNum} 学習ログ`;
+
+    this.openNewLogModal();
+  }
+
+  closeNewLogModal() {
+    const modal = document.getElementById('new-log-modal');
+    if (modal) modal.classList.remove('active');
+  }
+
+  saveDailyLogFromModal() {
+    const weekSelect = document.getElementById('log-week-select')?.value || '';
+    const title = document.getElementById('log-title-input')?.value || '学習ログ';
+    const tag = document.getElementById('log-tag-select')?.value || '理論';
+    const body = document.getElementById('log-body-input')?.value || '';
+
+    if (!body.trim()) {
+      alert('学習メモの内容を入力してください');
+      return;
+    }
+
+    const newLog = {
+      id: Date.now(),
+      title: `${weekSelect ? `[${weekSelect}] ` : ''}${title}`,
+      tag,
+      body,
+      created_at: new Date().toISOString()
+    };
+
+    this.localDailyLogs.unshift(newLog);
+    this.saveLocalDailyLogs();
+    this.closeNewLogModal();
+
+    // Reset input
+    document.getElementById('log-body-input').value = '';
+
+    // Refresh views
+    this.renderAllIssuesAndLogs();
+    this.renderLatestLogs();
+    alert('学習ログを保存しました！');
+  }
+
+  openGitHubIssueNewWindow() {
+    const weekSelect = document.getElementById('log-week-select')?.value || '';
+    const title = document.getElementById('log-title-input')?.value || '学習ログ';
+    const body = document.getElementById('log-body-input')?.value || '';
+
+    const fullTitle = encodeURIComponent(`${weekSelect ? `[${weekSelect}] ` : ''}${title}`);
+    const fullBody = encodeURIComponent(body);
+    const url = `https://github.com/tomoaki16/songwriting-study/issues/new?title=${fullTitle}&body=${fullBody}`;
+    window.open(url, '_blank');
   }
 
   openPromptModal() {
@@ -224,9 +405,17 @@ class AppController {
   }
 
   copyPromptTemplate() {
-    const promptText = `【本日の1時間作曲学習ログ】\n・学習テーマ：\n・学んだ理論・気づき：\n・分析した既存曲：\n・Studio One / ギターでの実践内容：\n・自作曲への応用アイデア：\n\n上記についてGitHub Issue登録・振り返りフィードバックをお願いします。`;
+    const promptText = `【本日の1時間作曲学習ログ】\n・対象：Month ${this.activeMonth}\n・学習テーマ：\n・学んだ理論・気づき：\n・分析した既存曲：\n・Studio One / ギターでの実践内容：\n・自作曲への応用アイデア：\n\n上記についてGitHub Issue登録・振り返りフィードバックをお願いします。`;
     navigator.clipboard.writeText(promptText);
-    alert('ChatGPT用学習ログプロンプトテンプレートをクリップボードにコピーしました！');
+    alert('ChatGPT用学習ログプロンプトをコピーしました！');
+  }
+
+  escapeHtml(str) {
+    return (str || '')
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
   }
 }
 

@@ -29,7 +29,7 @@
       <li class="nav-item">
         <button data-view="curriculum">
           <span class="nav-icon">📅</span>
-          <span>6か月カリキュラム</span>
+          <span>カリキュラム・目標</span>
         </button>
       </li>
       <li class="nav-item">
@@ -81,9 +81,9 @@
         <button class="btn btn-secondary" onclick="window.app.openPromptModal()">
           <span>🤖</span> ChatGPTログ作成
         </button>
-        <a href="https://github.com/tomoaki16/songwriting-study/issues/new" target="_blank" class="btn btn-primary">
-          <span>＋</span> Issueを立てる
-        </a>
+        <button class="btn btn-primary" onclick="window.app.openNewLogModal()">
+          <span>＋</span> ログ・進捗入力
+        </button>
       </div>
     </header>
 
@@ -127,7 +127,7 @@
         <!-- Latest Issues / Logs -->
         <div class="card col-8">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h3 style="font-size: 1.1rem; color: #ffffff;">最近の学習ログ・Issue (GitHub)</h3>
+            <h3 style="font-size: 1.1rem; color: #ffffff;">最近の学習ログ・Issue</h3>
             <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;" onclick="window.app.switchView('issues')">すべて見る</button>
           </div>
           <div id="dashboard-latest-logs">
@@ -163,19 +163,24 @@
       <div class="issue-filter-bar">
         <input type="text" id="issue-search-input" class="search-input" placeholder="ログ・キーワードを検索（例: ダイアトニック, メロディ, ドラム...）">
         <select id="issue-label-select" class="search-input" style="max-width: 180px;">
-          <option value="all">すべてのラベル</option>
+          <option value="all">すべてのタグ</option>
           <option value="理論">理論</option>
           <option value="分析">分析</option>
           <option value="実践">実践</option>
+          <option value="曲制作">曲制作</option>
+          <option value="ミックス">ミックス</option>
           <option value="学習ログ">学習ログ</option>
         </select>
-        <button class="btn btn-secondary" onclick="window.githubManager.fetchIssues().then(()=>window.githubManager.renderIssues('github-issues-container'))">
-          🔄 最新を取得
+        <button class="btn btn-primary" onclick="window.app.openNewLogModal()">
+          ＋ 新規ログ入力
+        </button>
+        <button class="btn btn-secondary" onclick="window.githubManager.fetchIssues().then(()=>{window.app.renderAllIssuesAndLogs();})">
+          🔄 リフレッシュ
         </button>
       </div>
 
       <div id="github-issues-container">
-        <p style="color: var(--text-muted);">GitHub Issues を取得中...</p>
+        <p style="color: var(--text-muted);">学習ログ・Issue を読み込み中...</p>
       </div>
     </section>
 
@@ -230,7 +235,7 @@
 
         <h4 style="font-size: 1rem; color: var(--primary-cyan); margin-bottom: 12px;">VPS デプロイ方法</h4>
         <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.6;">
-          本ダッシュボードは純粋な静的ファイル（HTML/CSS/JS）です。既存VPS（Nginx / Apache / Docker）の <code>/var/www/songwriting-dashboard</code> または指定ドキュメントルートへ展開してアクセス可能です。
+          本ダッシュボードは純粋な静的ファイル（HTML/CSS/JS）です。既存VPS（Nginx / Apache / Docker）の <code>/var/www/songwriting-study</code> または指定ドキュメントルートへ展開してアクセス可能です。
         </p>
         <pre class="mono-font" style="background: rgba(0,0,0,0.4); padding: 12px; border-radius: var(--radius-sm); margin-top: 12px; font-size: 0.82rem; color: var(--accent-green);">
 # VPS上でのクローン・配置例
@@ -244,18 +249,92 @@ chmod +x vps/deploy.sh
   </main>
 </div>
 
-<!-- Modal: ChatGPT Prompt Generator -->
+<!-- Modal 1: New Log & Issue Input -->
+<div id="new-log-modal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 style="color: #ffffff; font-size: 1.15rem;">✍️ 新規学習ログ・進捗メモの入力</h3>
+      <button class="modal-close-btn" onclick="window.app.closeNewLogModal()">✕</button>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label">対象月・週</label>
+      <select id="log-week-select" class="form-control">
+        <option value="Month 1 Week 1">Month 1 Week 1｜音名・音程・スケール</option>
+        <option value="Month 1 Week 2">Month 1 Week 2｜コードの基本</option>
+        <option value="Month 1 Week 3">Month 1 Week 3｜ダイアトニックコードとコード機能</option>
+        <option value="Month 1 Week 4">Month 1 Week 4｜リズム・曲構成</option>
+        <option value="Month 2 Week 5">Month 2 Week 5｜コード進行の設計</option>
+        <option value="Month 2 Week 6">Month 2 Week 6｜ノンダイアトニックコード</option>
+        <option value="Month 2 Week 7">Month 2 Week 7｜メロディの基礎</option>
+        <option value="Month 2 Week 8">Month 2 Week 8｜コードとメロディの統合</option>
+        <option value="Month 3 Week 9">Month 3 Week 9｜ドラムアレンジ</option>
+        <option value="Month 3 Week 10">Month 3 Week 10｜ベースライン構築</option>
+        <option value="Month 3 Week 11">Month 3 Week 11｜ギター・その他パート</option>
+        <option value="Month 3 Week 12">Month 3 Week 12｜アレンジと緩急</option>
+        <option value="Month 4 Week 13">Month 4 Week 13｜曲の事前設計</option>
+        <option value="Month 4 Week 14">Month 4 Week 14｜展開を作る</option>
+        <option value="Month 4 Week 15">Month 4 Week 15｜リファレンス分析</option>
+        <option value="Month 4 Week 16">Month 4 Week 16｜完成まで持っていく</option>
+        <option value="Month 5 Week 17">Month 5 Week 17｜録音テクニック</option>
+        <option value="Month 5 Week 18">Month 5 Week 18｜音作りとシグナルフロー</option>
+        <option value="Month 5 Week 19">Month 5 Week 19｜ミックス基礎</option>
+        <option value="Month 5 Week 20">Month 5 Week 20｜リファレンス比較ミックス</option>
+        <option value="Month 6 Week 21">Month 6 Week 21｜Song 03 完成</option>
+        <option value="Month 6 Week 22">Month 6 Week 22｜Song 04 集中制作</option>
+        <option value="Month 6 Week 23">Month 6 Week 23｜Song 04完成・Song 05制作</option>
+        <option value="Month 6 Week 24">Month 6 Week 24｜Song 05 完成</option>
+        <option value="Month 6 Week 25">Month 6 Week 25｜5曲ブラッシュアップ</option>
+        <option value="Month 6 Week 26">Month 6 Week 26｜最終完成・半年間レビュー</option>
+      </select>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px;">
+      <div class="form-group">
+        <label class="form-label">タイトル / テーマ</label>
+        <input type="text" id="log-title-input" class="form-control" placeholder="例: Cメジャースケールとギター指板音の比較">
+      </div>
+      <div class="form-group">
+        <label class="form-label">カテゴリタグ</label>
+        <select id="log-tag-select" class="form-control">
+          <option value="理論">理論</option>
+          <option value="分析">分析</option>
+          <option value="実践">実践</option>
+          <option value="曲制作">曲制作</option>
+          <option value="ミックス">ミックス</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">学習メモ・実践したこと・気づき</label>
+      <textarea id="log-body-input" class="form-control" placeholder="・Studio Oneに入力して響きを確認&#10;・ギターでルート音から3度・5度を探す練習&#10;・気づき：CからGへの移行時の終止感について" style="height: 140px;"></textarea>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 20px;">
+      <button class="btn btn-secondary" style="font-size: 0.82rem;" onclick="window.app.openGitHubIssueNewWindow()">
+        🔗 GitHub Issueとして開く
+      </button>
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-secondary" onclick="window.app.closeNewLogModal()">キャンセル</button>
+        <button class="btn btn-primary" onclick="window.app.saveDailyLogFromModal()">保存してダッシュボードに追加</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 2: ChatGPT Prompt Generator -->
 <div id="prompt-modal" class="modal-overlay">
   <div class="modal-box">
     <div class="modal-header">
-      <h3 style="color: #ffffff; font-size: 1.2rem;">🤖 ChatGPT連携用 ログ作成テンプレート</h3>
+      <h3 style="color: #ffffff; font-size: 1.15rem;">🤖 ChatGPT連携用 ログ作成テンプレート</h3>
       <button class="modal-close-btn" onclick="window.app.closePromptModal()">✕</button>
     </div>
-    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px;">
+    <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 16px;">
       以下のテンプレートをコピーし、ChatGPTとの対話で使用してください。1日の学習内容を伝えることで、Issue化やフィードバックをスムーズに行えます。
     </p>
     <div class="form-group">
-      <textarea id="prompt-template-area" class="form-control" readonly style="height: 180px; font-family: monospace; font-size: 0.85rem;">
+      <textarea id="prompt-template-area" class="form-control" readonly style="height: 160px; font-family: monospace; font-size: 0.82rem;">
 【本日の1時間作曲学習ログ】
 ・日付 / Week：
 ・学習テーマ：
