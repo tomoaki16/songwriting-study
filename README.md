@@ -63,6 +63,16 @@
 
 ---
 
+## ChatGPT 連携・運用ガイド
+
+GitHubと連携したChatGPTに本リポジトリを読み込ませ、Issue登録や進捗更新を行わせるためのシステム指示書を用意しています。
+
+* **ChatGPT用指示書**: [`CHATGPT_INSTRUCTIONS.md`](CHATGPT_INSTRUCTIONS.md)
+* **初回の指示方法**: ChatGPTに以下のようにチャットしてください。
+  > 「リポジトリ `tomoaki16/songwriting-study` と [`CHATGPT_INSTRUCTIONS.md`](CHATGPT_INSTRUCTIONS.md) を読み込んで、今後の学習対話からGitHub Issueの自動登録・更新・アドバイスを行ってください。」
+
+---
+
 ## 専用Webダッシュボード (Dedicated Page)
 
 進捗、各月実施計画、日々の学習ログ（GitHub Issues連動）、5曲の制作パイプラインを一元管理・閲覧できる専用Webアプリケーションを提供しています。
