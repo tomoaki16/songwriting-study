@@ -23,6 +23,12 @@
 * **ベース**: 録音可能だが作曲・編曲面を優先
 * **ドラム**: 主に打ち込み
 * **最終成果**: オリジナル曲5曲完成
+* **標準教材**: 現在使用中の作曲テキスト。学習内容とページの対応は [`curriculum/textbook-reference.md`](curriculum/textbook-reference.md) に一元管理する。
+
+### 標準教材の使い方
+
+テキストを最初から順番に消化するのではなく、6か月カリキュラムを主軸にして必要なページを参照する。
+日別の学習Issueを作る際は、ChatGPTが `curriculum/textbook-reference.md` と対象月のカリキュラムを確認し、その日の `📖 使用テキスト` としてページを明記する。
 
 ---
 
@@ -36,6 +42,8 @@
 | Month 4 | **楽曲制作** | 曲の事前設計、展開作り、リファレンス分析、1曲を完成させる力 | [Month 4 詳細](curriculum/month4.md) |
 | Month 5 | **録音・ミックス** | 録音・音作り・ミックス基礎・リファレンス比較（聴ける音源への変換） | [Month 5 詳細](curriculum/month5.md) |
 | Month 6 | **5曲完成** | 5曲の集中制作・完成、全曲ブラッシュアップ、半年間レビュー | [Month 6 詳細](curriculum/month6.md) |
+
+* **標準教材ページ対応表**: [curriculum/textbook-reference.md](curriculum/textbook-reference.md)
 
 ---
 
@@ -60,6 +68,7 @@
 5. **毎週必ず音を作る**: 理論だけで終わらせず、DAWやギターで短いフレーズや音を作る。
 6. **既存曲分析を継続する**: 全期間を通して「プロはどうしているか → 自分の曲はどうか」を比較する。
 7. **5曲完成を最優先する**: ノートだけ残って未完成を避ける。「これは自分の曲作りにどう使えるか？」を常に意識する。
+8. **標準教材とIssueを対応させる**: 日別Issueには、対応する教材ページがある場合は必ず `📖 使用テキスト` を記載する。
 
 ---
 
@@ -68,6 +77,7 @@
 GitHubと連携したChatGPTに本リポジトリを読み込ませ、Issue登録や進捗更新を行わせるためのシステム指示書を用意しています。
 
 * **ChatGPT用指示書**: [`CHATGPT_INSTRUCTIONS.md`](CHATGPT_INSTRUCTIONS.md)
+* **教材ページ対応表**: [`curriculum/textbook-reference.md`](curriculum/textbook-reference.md)
 * **初回の指示方法**: ChatGPTに以下のようにチャットしてください。
   > 「リポジトリ `tomoaki16/songwriting-study` と [`CHATGPT_INSTRUCTIONS.md`](CHATGPT_INSTRUCTIONS.md) を読み込んで、今後の学習対話からGitHub Issueの自動登録・更新・アドバイスを行ってください。」
 
