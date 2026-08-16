@@ -1,5 +1,5 @@
 /**
- * Main Application & SPA Controller with Completed Task Visual Badges
+ * Main Application & SPA Controller with Enhanced Completed Task UI & Progress Summary Banners
  */
 
 class AppController {
@@ -78,22 +78,28 @@ class AppController {
       });
     });
 
-    // Search & Filter for GitHub Issues
+    // Search & Filters for GitHub Issues
     const searchInput = document.getElementById('issue-search-input');
     if (searchInput) {
-      searchInput.addEventListener('input', (e) => {
-        const labelFilter = document.getElementById('issue-label-select')?.value || 'all';
-        this.renderAllIssuesAndLogs(e.target.value, labelFilter);
-      });
+      searchInput.addEventListener('input', () => this.triggerIssueFilters());
     }
 
     const labelSelect = document.getElementById('issue-label-select');
     if (labelSelect) {
-      labelSelect.addEventListener('change', (e) => {
-        const searchTerm = document.getElementById('issue-search-input')?.value || '';
-        this.renderAllIssuesAndLogs(searchTerm, e.target.value);
-      });
+      labelSelect.addEventListener('change', () => this.triggerIssueFilters());
     }
+
+    const statusSelect = document.getElementById('issue-status-select');
+    if (statusSelect) {
+      statusSelect.addEventListener('change', () => this.triggerIssueFilters());
+    }
+  }
+
+  triggerIssueFilters() {
+    const searchTerm = document.getElementById('issue-search-input')?.value || '';
+    const labelFilter = document.getElementById('issue-label-select')?.value || 'all';
+    const statusFilter = document.getElementById('issue-status-select')?.value || 'all';
+    this.renderAllIssuesAndLogs(searchTerm, labelFilter, statusFilter);
   }
 
   switchView(viewId) {
@@ -191,6 +197,12 @@ class AppController {
     });
   }
 
+  isIssueCompleted(issue) {
+    return issue.state === 'closed' || 
+      issue.number === 1 || issue.number === 2 ||
+      (issue.labels || []).some(l => ['完了', 'completed', 'done'].includes((l.name || '').toLowerCase()));
+  }
+
   renderActiveMonthCurriculum() {
     const container = document.getElementById('curriculum-month-detail');
     if (!container || !this.curriculumData) return;
@@ -214,27 +226,28 @@ class AppController {
       const wId = `m${monthData.month}_w${w.week}`;
       const customNote = this.customWeeklyNotes[wId] || '';
       const matchedIssues = this.getIssuesForWeek(monthData.month, w.week);
+      
+      const completedCount = matchedIssues.filter(i => this.isIssueCompleted(i)).length;
+      const percent = matchedIssues.length > 0 ? Math.round((completedCount / matchedIssues.length) * 100) : 0;
 
       const matchedIssuesHtml = matchedIssues.length > 0 ? matchedIssues.map(issue => {
-        const isCompleted = issue.state === 'closed' || 
-          issue.number === 1 || issue.number === 2 ||
-          (issue.labels || []).some(l => ['完了', 'completed', 'done'].includes((l.name || '').toLowerCase()));
+        const isCompleted = this.isIssueCompleted(issue);
         
         return `
-          <div style="background: ${isCompleted ? 'rgba(0, 245, 160, 0.05)' : 'rgba(255,255,255,0.04)'}; border-left: 3px solid ${isCompleted ? 'var(--accent-green)' : 'var(--primary-cyan)'}; border-radius: var(--radius-sm); padding: 8px 10px; margin-top: 6px; font-size: 0.82rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px;">
-              <a href="${issue.html_url}" target="${issue.isLocal ? '_self' : '_blank'}" style="color: #ffffff; font-weight: 600; text-decoration: none;">
-                ${isCompleted ? '<i class="fa-solid fa-circle-check" style="color: var(--accent-green); margin-right: 4px;"></i>' : '<i class="fa-regular fa-circle" style="color: var(--primary-cyan); margin-right: 4px;"></i>'}
+          <div style="background: ${isCompleted ? 'rgba(0, 245, 160, 0.12)' : 'rgba(255,255,255,0.04)'}; border-left: 4px solid ${isCompleted ? 'var(--accent-green)' : 'var(--primary-cyan)'}; border: ${isCompleted ? '1px solid rgba(0,245,160,0.35)' : 'none'}; border-radius: var(--radius-sm); padding: 10px 12px; margin-top: 8px; font-size: 0.84rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+              <a href="${issue.html_url}" target="${issue.isLocal ? '_self' : '_blank'}" style="color: #ffffff; font-weight: 700; text-decoration: none;">
+                ${isCompleted ? '<i class="fa-solid fa-circle-check" style="color: var(--accent-green); margin-right: 6px;"></i>' : '<i class="fa-regular fa-circle" style="color: var(--primary-cyan); margin-right: 6px;"></i>'}
                 ${issue.isLocal ? '[ローカル]' : `#${issue.number}`} ${this.escapeHtml(issue.title)}
               </a>
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <span class="label-badge ${isCompleted ? 'badge-completed' : 'badge-active'}" style="font-size: 0.68rem; padding: 2px 6px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="label-badge ${isCompleted ? 'badge-completed' : 'badge-active'}">
                   ${isCompleted ? '<i class="fa-solid fa-check"></i> 完了' : '進行中'}
                 </span>
                 <span style="font-size: 0.72rem; color: var(--text-muted);">${new Date(issue.created_at).toLocaleDateString('ja-JP')}</span>
               </div>
             </div>
-            <p style="color: var(--text-muted); margin-top: 4px; font-size: 0.78rem; line-height: 1.4; white-space: pre-wrap;">
+            <p style="color: var(--text-muted); margin-top: 6px; font-size: 0.8rem; line-height: 1.4; white-space: pre-wrap;">
               ${this.escapeHtml((issue.body || '').slice(0, 150))}${(issue.body || '').length > 150 ? '...' : ''}
             </p>
           </div>
@@ -293,11 +306,17 @@ class AppController {
 
           <!-- Associated Week GitHub Issues & Logs -->
           <div style="background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 12px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
               <span style="font-size: 0.82rem; font-weight: 600; color: var(--primary-cyan);">
                 <i class="fa-solid fa-link" style="margin-right: 4px;"></i> 今週の関連Issue・日々の学習ログ (${matchedIssues.length}件 / Day 1 ➔ Day 7 順)
               </span>
             </div>
+            ${matchedIssues.length > 0 ? `
+              <div class="completed-progress-banner">
+                <span><i class="fa-solid fa-chart-pie"></i> 今週のタスク消化率: <strong>${completedCount} / ${matchedIssues.length} 件完了 (${percent}%)</strong></span>
+                ${percent === 100 ? '<span>🎉 今週の目標クリア！</span>' : ''}
+              </div>
+            ` : ''}
             ${matchedIssuesHtml}
           </div>
 
@@ -324,7 +343,7 @@ class AppController {
     const searchInput = document.getElementById('issue-search-input');
     if (searchInput) {
       searchInput.value = `Week ${weekNum}`;
-      this.renderAllIssuesAndLogs(`Week ${weekNum}`, 'all');
+      this.triggerIssueFilters();
     }
   }
 
@@ -354,7 +373,7 @@ class AppController {
     if (completedSongsEl) completedSongsEl.textContent = `${completedSongs} / 5`;
   }
 
-  renderAllIssuesAndLogs(searchTerm = '', labelFilter = 'all') {
+  renderAllIssuesAndLogs(searchTerm = '', labelFilter = 'all', statusFilter = 'all') {
     const container = document.getElementById('github-issues-container');
     if (!container) return;
 
@@ -387,6 +406,12 @@ class AppController {
       );
     }
 
+    if (statusFilter === 'completed') {
+      combinedLogs = combinedLogs.filter(item => this.isIssueCompleted(item));
+    } else if (statusFilter === 'open') {
+      combinedLogs = combinedLogs.filter(item => !this.isIssueCompleted(item));
+    }
+
     if (combinedLogs.length === 0) {
       container.innerHTML = `
         <div style="text-align: center; padding: 40px; color: var(--text-muted);">
@@ -417,9 +442,7 @@ class AppController {
         year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
       });
 
-      const isCompleted = issue.state === 'closed' || 
-        issue.number === 1 || issue.number === 2 ||
-        (issue.labels || []).some(l => ['完了', 'completed', 'done'].includes((l.name || '').toLowerCase()));
+      const isCompleted = this.isIssueCompleted(issue);
       
       const labelsHtml = (issue.labels || []).map(l => 
         `<span class="label-badge" style="border-left: 2px solid #${l.color || '00f2fe'};">${this.escapeHtml(l.name)}</span>`
@@ -467,7 +490,7 @@ class AppController {
         title: `#${i.number} ${i.title}`, 
         created_at: i.created_at, 
         url: i.html_url,
-        isCompleted: i.state === 'closed' || i.number === 1 || i.number === 2 || (i.labels || []).some(l => ['完了', 'completed', 'done'].includes((l.name || '').toLowerCase()))
+        isCompleted: this.isIssueCompleted(i)
       }))
     ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 4);
 
@@ -477,12 +500,17 @@ class AppController {
     }
 
     container.innerHTML = all.map(item => `
-      <div style="padding: 10px 12px; background: ${item.isCompleted ? 'rgba(0, 245, 160, 0.04)' : 'rgba(255,255,255,0.03)'}; border-left: 3px solid ${item.isCompleted ? 'var(--accent-green)' : 'var(--primary-cyan)'}; border-radius: var(--radius-md); margin-bottom: 6px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
-        <a href="${item.url}" target="_blank" style="color: var(--primary-cyan); font-weight: 600; text-decoration: none;">
-          ${item.isCompleted ? '<i class="fa-solid fa-circle-check" style="color: var(--accent-green); margin-right: 4px;"></i>' : ''}
+      <div style="padding: 10px 12px; background: ${item.isCompleted ? 'rgba(0, 245, 160, 0.12)' : 'rgba(255,255,255,0.03)'}; border-left: 4px solid ${item.isCompleted ? 'var(--accent-green)' : 'var(--primary-cyan)'}; border-radius: var(--radius-md); margin-bottom: 6px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+        <a href="${item.url}" target="_blank" style="color: #ffffff; font-weight: 600; text-decoration: none;">
+          ${item.isCompleted ? '<i class="fa-solid fa-circle-check" style="color: var(--accent-green); margin-right: 6px;"></i>' : ''}
           ${this.escapeHtml(item.title)}
         </a>
-        <span style="font-size: 0.75rem; color: var(--text-dim);">${new Date(item.created_at).toLocaleDateString('ja-JP')}</span>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span class="label-badge ${item.isCompleted ? 'badge-completed' : 'badge-active'}" style="font-size: 0.65rem; padding: 2px 6px;">
+            ${item.isCompleted ? '完了' : '進行中'}
+          </span>
+          <span style="font-size: 0.75rem; color: var(--text-dim);">${new Date(item.created_at).toLocaleDateString('ja-JP')}</span>
+        </div>
       </div>
     `).join('');
   }

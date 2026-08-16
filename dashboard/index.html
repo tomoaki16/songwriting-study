@@ -170,7 +170,12 @@
     <section id="view-issues" class="view-panel">
       <div class="issue-filter-bar">
         <input type="text" id="issue-search-input" class="search-input" placeholder="ログ・キーワードを検索（例: ダイアトニック, メロディ, ドラム...）">
-        <select id="issue-label-select" class="search-input" style="max-width: 180px;">
+        <select id="issue-status-select" class="search-input" style="max-width: 150px;">
+          <option value="all">すべての状態</option>
+          <option value="completed">✓ 完了のみ</option>
+          <option value="open">⏳ 進行中のみ</option>
+        </select>
+        <select id="issue-label-select" class="search-input" style="max-width: 150px;">
           <option value="all">すべてのタグ</option>
           <option value="理論">理論</option>
           <option value="分析">分析</option>
