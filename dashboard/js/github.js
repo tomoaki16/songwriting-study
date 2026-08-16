@@ -24,6 +24,32 @@ class GitHubManager {
     }
   }
 
+  /**
+   * Filter out non-study/maintenance issues and keep only study task issues
+   */
+  isStudyTaskIssue(item) {
+    if (item.pull_request) return false;
+
+    const title = (item.title || '').toLowerCase();
+    const labels = (item.labels || []).map(l => (l.name || '').toLowerCase());
+
+    // 1. Exclude maintenance, infrastructure, chore, bug, refactor, admin tasks
+    const excludeKeywords = ['maintenance', 'setup', 'infra', 'chore', 'bug', 'refactor', 'admin', 'ignore', 'ci/cd', 'wontfix', 'duplicate', 'invalid', 'メンテナンス', '環境構築', 'インフラ', 'バグ修正', 'リファクタリング'];
+    
+    // If any label matches exclude keywords -> exclude
+    if (labels.some(l => excludeKeywords.includes(l))) {
+      return false;
+    }
+
+    // If title contains explicit maintenance/infra/bug prefix -> exclude
+    if (excludeKeywords.some(kw => title.startsWith(`[${kw}]`) || title.includes(`[${kw}]`) || title.includes(kw))) {
+      return false;
+    }
+
+    // 2. Target study task issues (Month M / Week W / Day D / Songs / Music Theory)
+    return true;
+  }
+
   async fetchIssues() {
     this.loading = true;
     const token = this.getToken();
@@ -35,7 +61,7 @@ class GitHubManager {
     }
 
     try {
-      const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/issues?state=all&per_page=50`, {
+      const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/issues?state=all&per_page=100`, {
         headers
       });
 
@@ -44,13 +70,14 @@ class GitHubManager {
       }
 
       const data = await response.json();
-      this.issues = data.filter(item => !item.pull_request);
+      // Filter ONLY study task issues (excluding PRs and maintenance issues)
+      this.issues = data.filter(item => this.isStudyTaskIssue(item));
       this.loading = false;
       return { success: true, issues: this.issues };
     } catch (err) {
       console.warn('GitHub API fetch failed or rate limited, loading fallback/cached data:', err);
       this.loading = false;
-      this.issues = this.getFallbackIssues();
+      this.issues = this.getFallbackIssues().filter(item => this.isStudyTaskIssue(item));
       return { success: false, issues: this.issues, error: err.message };
     }
   }
@@ -68,7 +95,7 @@ class GitHubManager {
       {
         id: 1,
         number: 1,
-        title: 'Week 1｜音階・度数・メジャースケール学習ログ',
+        title: '[Month 1 Week 1 Day 1] 音名・半音/全音・メジャースケールの理解',
         state: 'open',
         html_url: `https://github.com/${GITHUB_REPO}/issues/1`,
         created_at: '2026-08-16T10:00:00Z',
@@ -82,7 +109,7 @@ class GitHubManager {
       {
         id: 2,
         number: 2,
-        title: 'Week 2｜コード構成音と7thコード比較ノート',
+        title: '[Month 1 Week 1 Day 2] 音程と度数（3度・5度・7度）の確認',
         state: 'open',
         html_url: `https://github.com/${GITHUB_REPO}/issues/2`,
         created_at: '2026-08-15T14:30:00Z',
@@ -119,7 +146,7 @@ class GitHubManager {
     if (items.length === 0) {
       container.innerHTML = `
         <div style="text-align: center; padding: 40px; color: var(--text-muted);">
-          <p>該当する学習ログ・Issueは見つかりませんでした。</p>
+          <p>該当する学習タスク・Issueは見つかりませんでした。</p>
         </div>
       `;
       return;
@@ -129,7 +156,6 @@ class GitHubManager {
       const dateStr = new Date(issue.created_at).toLocaleDateString('ja-JP', {
         year: 'numeric', month: 'short', day: 'numeric'
       });
-      const stateBadgeClass = issue.state === 'open' ? 'cyan' : 'green';
       
       const labelsHtml = (issue.labels || []).map(l => 
         `<span class="label-badge" style="border-left: 2px solid #${l.color || '00f2fe'};">${l.name}</span>`
