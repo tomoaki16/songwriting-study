@@ -1,5 +1,5 @@
 /**
- * Main Application & SPA Controller with Week-Issue Matching & Day 1->2->3 Chronological Sorting
+ * Main Application & SPA Controller with Font Awesome 6 Icons & Day 1->2->3 Chronological Sorting
  */
 
 class AppController {
@@ -160,11 +160,9 @@ class AppController {
       const bodyLower = (issue.body || '').toLowerCase();
       const labels = (issue.labels || []).map(l => (l.name || '').toLowerCase());
 
-      // Check title or body match for Week W / Month M Week W
       if (titleLower.includes(weekPattern1) || titleLower.includes(weekPattern2)) return true;
       if (labels.includes(weekPattern2) || labels.includes(`week${weekNum}`)) return true;
 
-      // Special check: if Month 1 and week 1, match Month 1 issue with Week 1 in title/body
       if (labels.includes(`month ${monthNum}`) && (titleLower.includes(`week ${weekNum}`) || bodyLower.includes(`week ${weekNum}`))) {
         return true;
       }
@@ -241,11 +239,11 @@ class AppController {
             <div style="display: flex; gap: 6px; flex-wrap: wrap;">
               <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" 
                 onclick="window.app.filterIssuesForWeek(${monthData.month}, ${w.week})">
-                🔍 Issue一覧で検索
+                <i class="fa-solid fa-magnifying-glass"></i> Issue一覧で検索
               </button>
               <button class="btn btn-primary" style="padding: 4px 10px; font-size: 0.75rem;" 
                 onclick="window.app.openNewLogModalWithWeek(${monthData.month}, ${w.week})">
-                ＋ ログを入力
+                <i class="fa-solid fa-plus"></i> ログを入力
               </button>
             </div>
           </div>
@@ -267,7 +265,9 @@ class AppController {
           <!-- Weekly Custom Goal / Personal Memo -->
           <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <span style="font-size: 0.78rem; font-weight: 600; color: var(--accent-amber);">✍️ 今週の個人民標・一筆メモ</span>
+              <span style="font-size: 0.78rem; font-weight: 600; color: var(--accent-amber);">
+                <i class="fa-solid fa-pen-to-square" style="margin-right: 4px;"></i> 今週の個人民標・一筆メモ
+              </span>
             </div>
             <input type="text" class="form-control" style="font-size: 0.82rem; padding: 6px 10px;" 
               placeholder="例: Cメジャーのサビ進行3パターン作成を目標にする" 
@@ -275,11 +275,11 @@ class AppController {
               onchange="window.app.updateWeeklyNote('${wId}', this.value)">
           </div>
 
-          <!-- Associated Week GitHub Issues & Logs (Sorted Day 1 -> Day 2 -> Day 3) -->
+          <!-- Associated Week GitHub Issues & Logs -->
           <div style="background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
               <span style="font-size: 0.82rem; font-weight: 600; color: var(--primary-cyan);">
-                📌 今週の関連Issue・日々の学習ログ (${matchedIssues.length}件 / Day 1 ➔ Day 7 順)
+                <i class="fa-solid fa-link" style="margin-right: 4px;"></i> 今週の関連Issue・日々の学習ログ (${matchedIssues.length}件 / Day 1 ➔ Day 7 順)
               </span>
             </div>
             ${matchedIssuesHtml}
@@ -287,7 +287,9 @@ class AppController {
 
           <!-- Task Checkbox -->
           <div style="border-top: 1px dashed var(--border-color); padding-top: 10px; margin-top: 10px;">
-            <h4 style="font-size: 0.82rem; color: var(--accent-green); margin-bottom: 6px;">実践・課題クリア</h4>
+            <h4 style="font-size: 0.82rem; color: var(--accent-green); margin-bottom: 6px;">
+              <i class="fa-solid fa-square-check" style="margin-right: 4px;"></i> 実践・課題クリア
+            </h4>
             <div class="task-item">
               <input type="checkbox" id="${wId}_task" ${this.checkedTasks[wId] ? 'checked' : ''} 
                 onchange="window.app.toggleTask('${wId}', this.checked)">
