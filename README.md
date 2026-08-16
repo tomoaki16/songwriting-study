@@ -67,6 +67,8 @@
 
 進捗、各月実施計画、日々の学習ログ（GitHub Issues連動）、5曲の制作パイプラインを一元管理・閲覧できる専用Webアプリケーションを提供しています。
 
+* **公開URL (SSL)**: [https://app.clubneutrino.com/songwriting/](https://app.clubneutrino.com/songwriting/)
+* **IP直接アクセス**: [http://210.131.221.233/](http://210.131.221.233/)
 * **ローカル閲覧**: [`dashboard/index.html`](dashboard/index.html) をブラウザで開く
 * **VPS配信手順**:
   ```bash
