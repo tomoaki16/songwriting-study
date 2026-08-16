@@ -501,10 +501,34 @@ code, pre, .mono-font {
   transition: var(--transition);
 }
 
+.issue-card.issue-completed {
+  border-left: 4px solid var(--accent-green);
+  background: rgba(0, 245, 160, 0.04);
+}
+
+.issue-card.issue-active {
+  border-left: 4px solid var(--primary-cyan);
+  background: rgba(0, 242, 254, 0.03);
+}
+
 .issue-card:hover {
   background: var(--bg-card-hover);
   border-color: var(--border-color-glow);
   transform: translateX(4px);
+}
+
+.badge-completed {
+  background: rgba(0, 245, 160, 0.2) !important;
+  color: var(--accent-green) !important;
+  border: 1px solid rgba(0, 245, 160, 0.4);
+  font-weight: 700 !important;
+}
+
+.badge-active {
+  background: rgba(0, 242, 254, 0.15) !important;
+  color: var(--primary-cyan) !important;
+  border: 1px solid rgba(0, 242, 254, 0.3);
+  font-weight: 700 !important;
 }
 
 .issue-header {

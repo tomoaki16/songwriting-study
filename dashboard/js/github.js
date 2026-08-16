@@ -36,17 +36,14 @@ class GitHubManager {
     // 1. Exclude maintenance, infrastructure, chore, bug, refactor, admin tasks
     const excludeKeywords = ['maintenance', 'setup', 'infra', 'chore', 'bug', 'refactor', 'admin', 'ignore', 'ci/cd', 'wontfix', 'duplicate', 'invalid', 'メンテナンス', '環境構築', 'インフラ', 'バグ修正', 'リファクタリング'];
     
-    // If any label matches exclude keywords -> exclude
     if (labels.some(l => excludeKeywords.includes(l))) {
       return false;
     }
 
-    // If title contains explicit maintenance/infra/bug prefix -> exclude
     if (excludeKeywords.some(kw => title.startsWith(`[${kw}]`) || title.includes(`[${kw}]`) || title.includes(kw))) {
       return false;
     }
 
-    // 2. Target study task issues (Month M / Week W / Day D / Songs / Music Theory)
     return true;
   }
 
@@ -70,7 +67,6 @@ class GitHubManager {
       }
 
       const data = await response.json();
-      // Filter ONLY study task issues (excluding PRs and maintenance issues)
       this.issues = data.filter(item => this.isStudyTaskIssue(item));
       this.loading = false;
       return { success: true, issues: this.issues };
@@ -90,20 +86,19 @@ class GitHubManager {
       } catch (e) {}
     }
 
-    // Default seed issues for initial viewing
     return [
       {
         id: 1,
         number: 1,
         title: '[Month 1 Week 1 Day 1] 音名・半音/全音・メジャースケールの理解',
-        state: 'open',
+        state: 'closed',
         html_url: `https://github.com/${GITHUB_REPO}/issues/1`,
         created_at: '2026-08-16T10:00:00Z',
         body: '## 1日約1時間ログ\n- CメジャースケールをStudio Oneで入力＆ギター指板音確認\n- ドから見た完全5度（ソ）、長3度（ミ）の響きを実機検証。\n- 分析：好きな曲のキーがC Majorであることを確認。',
         labels: [
           { name: 'Month 1', color: '00f2fe' },
           { name: '理論', color: '9d50bb' },
-          { name: '学習ログ', color: '00f5a0' }
+          { name: '完了', color: '00f5a0' }
         ]
       },
       {
@@ -116,7 +111,7 @@ class GitHubManager {
         body: 'Cmaj7 と C7 の3度・7度の配置を比較。ボイシング変更による緊張感の違いをDAWとギターで確認した。',
         labels: [
           { name: 'Month 1', color: '00f2fe' },
-          { name: '実践', color: 'ffb199' }
+          { name: '進行中', color: 'ffb199' }
         ]
       }
     ];
@@ -128,7 +123,6 @@ class GitHubManager {
 
     let items = issuesList || this.issues;
 
-    // Filter by search & label
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       items = items.filter(issue => 
@@ -156,16 +150,26 @@ class GitHubManager {
       const dateStr = new Date(issue.created_at).toLocaleDateString('ja-JP', {
         year: 'numeric', month: 'short', day: 'numeric'
       });
+
+      const isCompleted = issue.state === 'closed' || (issue.labels || []).some(l => ['完了', 'completed', 'done'].includes((l.name || '').toLowerCase()));
       
       const labelsHtml = (issue.labels || []).map(l => 
-        `<span class="label-badge" style="border-left: 2px solid #${l.color || '00f2fe'};">${l.name}</span>`
+        `<span class="label-badge" style="border-left: 2px solid #${l.color || '00f2fe'};">${this.escapeHtml(l.name)}</span>`
       ).join('');
 
+      const statusBadge = isCompleted 
+        ? `<span class="label-badge badge-completed"><i class="fa-solid fa-circle-check"></i> 完了</span>`
+        : `<span class="label-badge badge-active"><i class="fa-solid fa-spinner"></i> 進行中</span>`;
+
+      const titleIcon = isCompleted 
+        ? `<i class="fa-solid fa-circle-check" style="color: var(--accent-green); margin-right: 6px;"></i>` 
+        : `<i class="fa-regular fa-circle" style="color: var(--primary-cyan); margin-right: 6px;"></i>`;
+
       return `
-        <div class="issue-card">
+        <div class="issue-card ${isCompleted ? 'issue-completed' : 'issue-active'}">
           <div class="issue-header">
             <a href="${issue.html_url}" target="_blank" class="issue-title">
-              #${issue.number} ${this.escapeHtml(issue.title)}
+              ${titleIcon} #${issue.number} ${this.escapeHtml(issue.title)}
             </a>
             <span class="issue-number">${dateStr}</span>
           </div>
@@ -173,9 +177,7 @@ class GitHubManager {
             ${this.escapeHtml((issue.body || '').slice(0, 150))}${(issue.body || '').length > 150 ? '...' : ''}
           </p>
           <div class="issue-labels">
-            <span class="label-badge" style="background: rgba(0, 242, 254, 0.15); color: var(--primary-cyan);">
-              ${issue.state.toUpperCase()}
-            </span>
+            ${statusBadge}
             ${labelsHtml}
           </div>
         </div>

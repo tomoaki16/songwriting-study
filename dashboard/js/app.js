@@ -1,5 +1,5 @@
 /**
- * Main Application & SPA Controller with Font Awesome 6 Icons & Day 1->2->3 Chronological Sorting
+ * Main Application & SPA Controller with Completed Task Visual Badges
  */
 
 class AppController {
@@ -145,7 +145,7 @@ class AppController {
         body: log.body,
         created_at: log.created_at,
         html_url: '#',
-        state: 'completed',
+        state: 'closed',
         isLocal: true,
         labels: [{ name: log.tag || '学習ログ', color: '00f2fe' }]
       })),
@@ -211,19 +211,29 @@ class AppController {
       const customNote = this.customWeeklyNotes[wId] || '';
       const matchedIssues = this.getIssuesForWeek(monthData.month, w.week);
 
-      const matchedIssuesHtml = matchedIssues.length > 0 ? matchedIssues.map(issue => `
-        <div style="background: rgba(255,255,255,0.04); border-left: 3px solid var(--primary-cyan); border-radius: var(--radius-sm); padding: 8px 10px; margin-top: 6px; font-size: 0.82rem;">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px;">
-            <a href="${issue.html_url}" target="${issue.isLocal ? '_self' : '_blank'}" style="color: #ffffff; font-weight: 600; text-decoration: none;">
-              ${issue.isLocal ? '[ローカル]' : `#${issue.number}`} ${this.escapeHtml(issue.title)}
-            </a>
-            <span style="font-size: 0.72rem; color: var(--text-muted);">${new Date(issue.created_at).toLocaleDateString('ja-JP')}</span>
+      const matchedIssuesHtml = matchedIssues.length > 0 ? matchedIssues.map(issue => {
+        const isCompleted = issue.state === 'closed' || (issue.labels || []).some(l => ['完了', 'completed', 'done'].includes((l.name || '').toLowerCase()));
+        
+        return `
+          <div style="background: ${isCompleted ? 'rgba(0, 245, 160, 0.05)' : 'rgba(255,255,255,0.04)'}; border-left: 3px solid ${isCompleted ? 'var(--accent-green)' : 'var(--primary-cyan)'}; border-radius: var(--radius-sm); padding: 8px 10px; margin-top: 6px; font-size: 0.82rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px;">
+              <a href="${issue.html_url}" target="${issue.isLocal ? '_self' : '_blank'}" style="color: #ffffff; font-weight: 600; text-decoration: none;">
+                ${isCompleted ? '<i class="fa-solid fa-circle-check" style="color: var(--accent-green); margin-right: 4px;"></i>' : '<i class="fa-regular fa-circle" style="color: var(--primary-cyan); margin-right: 4px;"></i>'}
+                ${issue.isLocal ? '[ローカル]' : `#${issue.number}`} ${this.escapeHtml(issue.title)}
+              </a>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span class="label-badge ${isCompleted ? 'badge-completed' : 'badge-active'}" style="font-size: 0.68rem; padding: 2px 6px;">
+                  ${isCompleted ? '<i class="fa-solid fa-check"></i> 完了' : '進行中'}
+                </span>
+                <span style="font-size: 0.72rem; color: var(--text-muted);">${new Date(issue.created_at).toLocaleDateString('ja-JP')}</span>
+              </div>
+            </div>
+            <p style="color: var(--text-muted); margin-top: 4px; font-size: 0.78rem; line-height: 1.4; white-space: pre-wrap;">
+              ${this.escapeHtml((issue.body || '').slice(0, 150))}${(issue.body || '').length > 150 ? '...' : ''}
+            </p>
           </div>
-          <p style="color: var(--text-muted); margin-top: 4px; font-size: 0.78rem; line-height: 1.4; white-space: pre-wrap;">
-            ${this.escapeHtml((issue.body || '').slice(0, 150))}${(issue.body || '').length > 150 ? '...' : ''}
-          </p>
-        </div>
-      `).join('') : `
+        `;
+      }).join('') : `
         <p style="color: var(--text-dim); font-size: 0.78rem; font-style: italic; margin-top: 4px;">
           まだ登録されたIssueログはありません。「＋ この週のログを入力」またはChatGPTから登録できます。
         </p>
@@ -350,7 +360,7 @@ class AppController {
         body: log.body,
         created_at: log.created_at,
         html_url: '#',
-        state: 'completed',
+        state: 'closed',
         isLocal: true,
         labels: [{ name: log.tag || '学習ログ', color: '00f2fe' }]
       })),
@@ -400,19 +410,30 @@ class AppController {
       const dateStr = new Date(issue.created_at).toLocaleDateString('ja-JP', {
         year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
       });
+
+      const isCompleted = issue.state === 'closed' || (issue.labels || []).some(l => ['完了', 'completed', 'done'].includes((l.name || '').toLowerCase()));
       
       const labelsHtml = (issue.labels || []).map(l => 
-        `<span class="label-badge" style="border-left: 2px solid #${l.color || '00f2fe'};">${l.name}</span>`
+        `<span class="label-badge" style="border-left: 2px solid #${l.color || '00f2fe'};">${this.escapeHtml(l.name)}</span>`
       ).join('');
 
+      const statusBadge = isCompleted 
+        ? `<span class="label-badge badge-completed"><i class="fa-solid fa-circle-check"></i> 完了</span>`
+        : `<span class="label-badge badge-active"><i class="fa-solid fa-spinner"></i> 進行中</span>`;
+
+      const titleIcon = isCompleted 
+        ? `<i class="fa-solid fa-circle-check" style="color: var(--accent-green); margin-right: 6px;"></i>` 
+        : `<i class="fa-regular fa-circle" style="color: var(--primary-cyan); margin-right: 6px;"></i>`;
+
       return `
-        <div class="issue-card">
+        <div class="issue-card ${isCompleted ? 'issue-completed' : 'issue-active'}">
           <div class="issue-header">
             <div>
-              <span class="label-badge" style="background: ${issue.isLocal ? 'rgba(0, 245, 160, 0.2)' : 'rgba(0, 242, 254, 0.15)'}; color: ${issue.isLocal ? 'var(--accent-green)' : 'var(--primary-cyan)'};">
+              ${titleIcon}
+              <span class="label-badge" style="background: ${issue.isLocal ? 'rgba(0, 245, 160, 0.2)' : 'rgba(0, 242, 254, 0.15)'}; color: ${issue.isLocal ? 'var(--accent-green)' : 'var(--primary-cyan)'}; margin-right: 4px;">
                 ${issue.isLocal ? 'LOCAL LOG' : `ISSUE #${issue.number}`}
               </span>
-              <a href="${issue.html_url}" target="${issue.isLocal ? '_self' : '_blank'}" class="issue-title" style="margin-left: 6px;">
+              <a href="${issue.html_url}" target="${issue.isLocal ? '_self' : '_blank'}" class="issue-title" style="margin-left: 4px;">
                 ${window.githubManager.escapeHtml(issue.title)}
               </a>
             </div>
@@ -420,6 +441,7 @@ class AppController {
           </div>
           <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.5; margin: 8px 0; white-space: pre-wrap;">${window.githubManager.escapeHtml(issue.body)}</p>
           <div class="issue-labels">
+            ${statusBadge}
             ${labelsHtml}
           </div>
         </div>
@@ -432,8 +454,13 @@ class AppController {
     if (!container) return;
 
     const all = [
-      ...this.localDailyLogs.map(l => ({ title: l.title, created_at: l.created_at, url: '#' })),
-      ...(window.githubManager.issues || []).map(i => ({ title: `#${i.number} ${i.title}`, created_at: i.created_at, url: i.html_url }))
+      ...this.localDailyLogs.map(l => ({ title: l.title, created_at: l.created_at, url: '#', isCompleted: true })),
+      ...(window.githubManager.issues || []).map(i => ({ 
+        title: `#${i.number} ${i.title}`, 
+        created_at: i.created_at, 
+        url: i.html_url,
+        isCompleted: i.state === 'closed' || (i.labels || []).some(l => ['完了', 'completed', 'done'].includes((l.name || '').toLowerCase()))
+      }))
     ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 4);
 
     if (all.length === 0) {
@@ -442,8 +469,9 @@ class AppController {
     }
 
     container.innerHTML = all.map(item => `
-      <div style="padding: 10px 12px; background: rgba(255,255,255,0.03); border-radius: var(--radius-md); margin-bottom: 6px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+      <div style="padding: 10px 12px; background: ${item.isCompleted ? 'rgba(0, 245, 160, 0.04)' : 'rgba(255,255,255,0.03)'}; border-left: 3px solid ${item.isCompleted ? 'var(--accent-green)' : 'var(--primary-cyan)'}; border-radius: var(--radius-md); margin-bottom: 6px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
         <a href="${item.url}" target="_blank" style="color: var(--primary-cyan); font-weight: 600; text-decoration: none;">
+          ${item.isCompleted ? '<i class="fa-solid fa-circle-check" style="color: var(--accent-green); margin-right: 4px;"></i>' : ''}
           ${this.escapeHtml(item.title)}
         </a>
         <span style="font-size: 0.75rem; color: var(--text-dim);">${new Date(item.created_at).toLocaleDateString('ja-JP')}</span>
@@ -527,7 +555,7 @@ class AppController {
   }
 
   copyPromptTemplate() {
-    const promptText = `【本日の1時間作曲学習ログ】\n・対象: Month ${this.activeMonth}\n・タイトル: [Month ${this.activeMonth} Week X Day Y] \n・学習テーマ：\n・学んだ理論・気づき：\n・分析した既存曲：\n・Studio One / ギターでの実践内容：\n・自作曲への応用アイデア：\n\n上記についてGitHub Issue ([Month ${this.activeMonth} Week X Day Y] 形式のタイトル) の登録・更新およびフィードバックをお願いします。`;
+    const promptText = `【本日の1時間作曲学習ログ】\n・対象: Month ${this.activeMonth}\n・タイトル: [Month ${this.activeMonth} Week X Day Y] \n・学習テーマ：\n・学んだ理論・気づき：\n・分析した既存曲：\n・Studio One / ギターでの実践内容：\n・自作曲への応用アイデア：\n\n上記について学習完了の評価を行い、GitHub Issue ([Month ${this.activeMonth} Week X Day Y] 形式のタイトル、'完了' ラベル付与またはstate:closed) の登録・更新をお願いします。`;
     navigator.clipboard.writeText(promptText);
     alert('ChatGPT用学習ログプロンプトをコピーしました！');
   }
