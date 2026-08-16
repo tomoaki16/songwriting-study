@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>6か月作曲学習ダッシュボード｜Songwriting Study Hub</title>
+  <!-- Font Awesome 6 Vector Icon Library -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -12,7 +14,9 @@
   <!-- Sidebar Navigation -->
   <aside class="sidebar">
     <div class="brand-header">
-      <div class="brand-icon">🎵</div>
+      <div class="brand-icon">
+        <i class="fa-solid fa-compact-disc"></i>
+      </div>
       <div>
         <div class="brand-title">Songwriting Hub</div>
         <div class="brand-subtitle">6か月作曲学習計画</div>
@@ -22,37 +26,37 @@
     <ul class="nav-menu">
       <li class="nav-item active">
         <button data-view="dashboard">
-          <span class="nav-icon">📊</span>
+          <span class="nav-icon"><i class="fa-solid fa-sliders"></i></span>
           <span>ダッシュボード</span>
         </button>
       </li>
       <li class="nav-item">
         <button data-view="curriculum">
-          <span class="nav-icon">📅</span>
+          <span class="nav-icon"><i class="fa-solid fa-calendar-days"></i></span>
           <span>カリキュラム・目標</span>
         </button>
       </li>
       <li class="nav-item">
         <button data-view="issues">
-          <span class="nav-icon">📝</span>
+          <span class="nav-icon"><i class="fa-solid fa-clipboard-list"></i></span>
           <span>学習ログ & Issues</span>
         </button>
       </li>
       <li class="nav-item">
         <button data-view="songs">
-          <span class="nav-icon">🎸</span>
+          <span class="nav-icon"><i class="fa-solid fa-guitar"></i></span>
           <span>5曲制作パイプライン</span>
         </button>
       </li>
       <li class="nav-item">
         <button data-view="notes">
-          <span class="nav-icon">💡</span>
+          <span class="nav-icon"><i class="fa-solid fa-lightbulb"></i></span>
           <span>理論・分析メモ</span>
         </button>
       </li>
       <li class="nav-item">
         <button data-view="settings">
-          <span class="nav-icon">⚙️</span>
+          <span class="nav-icon"><i class="fa-solid fa-gear"></i></span>
           <span>設定・連携</span>
         </button>
       </li>
@@ -62,7 +66,7 @@
       <div class="github-sync-card">
         <div class="sync-status">
           <span class="pulse-dot"></span>
-          <span>GitHub Live Sync</span>
+          <span><i class="fa-brands fa-github"></i> Live Sync</span>
         </div>
         <div style="color: var(--text-dim); font-size: 0.72rem;">tomoaki16/songwriting-study</div>
       </div>
@@ -79,10 +83,10 @@
       </div>
       <div class="actions-group">
         <button class="btn btn-secondary" onclick="window.app.openPromptModal()">
-          <span>🤖</span> ChatGPTログ作成
+          <i class="fa-solid fa-robot"></i> ChatGPT指示用
         </button>
         <button class="btn btn-primary" onclick="window.app.openNewLogModal()">
-          <span>＋</span> ログ・進捗入力
+          <i class="fa-solid fa-plus"></i> ログ・進捗入力
         </button>
       </div>
     </header>
@@ -93,7 +97,7 @@
         <!-- Stat Widgets -->
         <div class="card col-4">
           <div class="stat-widget">
-            <div class="stat-icon cyan">📅</div>
+            <div class="stat-icon cyan"><i class="fa-solid fa-chart-line"></i></div>
             <div>
               <div class="stat-value" id="overall-progress-percent">0%</div>
               <div class="stat-label">カリキュラム達成度 (24 Weeks)</div>
@@ -106,7 +110,7 @@
 
         <div class="card col-4">
           <div class="stat-widget">
-            <div class="stat-icon purple">🎸</div>
+            <div class="stat-icon purple"><i class="fa-solid fa-music"></i></div>
             <div>
               <div class="stat-value" id="stat-completed-songs">0 / 5</div>
               <div class="stat-label">完成オリジナル楽曲</div>
@@ -116,7 +120,7 @@
 
         <div class="card col-4">
           <div class="stat-widget">
-            <div class="stat-icon green">⚡</div>
+            <div class="stat-icon green"><i class="fa-solid fa-bolt"></i></div>
             <div>
               <div class="stat-value">1 hr / day</div>
               <div class="stat-label">目標学習ペース (週7時間上限)</div>
@@ -127,7 +131,9 @@
         <!-- Latest Issues / Logs -->
         <div class="card col-8">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <h3 style="font-size: 1.1rem; color: #ffffff;">最近の学習ログ・Issue</h3>
+            <h3 style="font-size: 1.1rem; color: #ffffff;">
+              <i class="fa-solid fa-list-check" style="color: var(--primary-cyan); margin-right: 6px;"></i> 最近の学習ログ・Issue
+            </h3>
             <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;" onclick="window.app.switchView('issues')">すべて見る</button>
           </div>
           <div id="dashboard-latest-logs">
@@ -137,7 +143,9 @@
 
         <!-- 5-Song Quick Status -->
         <div class="card col-4">
-          <h3 style="font-size: 1.1rem; color: #ffffff; margin-bottom: 16px;">5曲のロードマップ</h3>
+          <h3 style="font-size: 1.1rem; color: #ffffff; margin-bottom: 16px;">
+            <i class="fa-solid fa-layer-group" style="color: var(--accent-purple); margin-right: 6px;"></i> 5曲のロードマップ
+          </h3>
           <ul style="list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 0.88rem;">
             <li style="display: flex; justify-content: space-between;"><span>Song 01 (Idea)</span> <span style="color: var(--primary-cyan);">Month 2〜4</span></li>
             <li style="display: flex; justify-content: space-between;"><span>Song 02 (Backlog)</span> <span style="color: var(--text-muted);">Month 3〜5</span></li>
@@ -172,10 +180,10 @@
           <option value="学習ログ">学習ログ</option>
         </select>
         <button class="btn btn-primary" onclick="window.app.openNewLogModal()">
-          ＋ 新規ログ入力
+          <i class="fa-solid fa-plus"></i> 新規ログ入力
         </button>
         <button class="btn btn-secondary" onclick="window.githubManager.fetchIssues().then(()=>{window.app.renderAllIssuesAndLogs();})">
-          🔄 リフレッシュ
+          <i class="fa-solid fa-rotate"></i> リフレッシュ
         </button>
       </div>
 
@@ -187,7 +195,9 @@
     <!-- Panel 4: 5-Song Pipeline -->
     <section id="view-songs" class="view-panel">
       <div class="card" style="margin-bottom: 24px;">
-        <h3 style="font-size: 1.1rem; color: #ffffff; margin-bottom: 8px;">オリジナル曲 5曲カンバン・パイプライン</h3>
+        <h3 style="font-size: 1.1rem; color: #ffffff; margin-bottom: 8px;">
+          <i class="fa-solid fa-guitar" style="color: var(--primary-cyan); margin-right: 6px;"></i> オリジナル曲 5曲カンバン・パイプライン
+        </h3>
         <p style="color: var(--text-muted); font-size: 0.88rem;">アイデアから骨格制作、フルアレンジ、録音・ミックス、完成までトラック進行を管理します。</p>
       </div>
       
@@ -198,7 +208,9 @@
     <section id="view-notes" class="view-panel">
       <div class="dashboard-grid">
         <div class="card col-6">
-          <h3 style="font-size: 1.1rem; color: var(--primary-cyan); margin-bottom: 12px;">🎵 音楽理論クイックリファレンス</h3>
+          <h3 style="font-size: 1.1rem; color: var(--primary-cyan); margin-bottom: 12px;">
+            <i class="fa-solid fa-graduation-cap"></i> 音楽理論クイックリファレンス
+          </h3>
           <ul style="padding-left: 20px; line-height: 1.8; color: var(--text-muted); font-size: 0.9rem;">
             <li><strong>メジャースケール:</strong> 全 - 全 - 半 - 全 - 全 - 全 - 半</li>
             <li><strong>三和音:</strong> Major (1-3-5), Minor (1-♭3-5), Dim (1-♭3-♭5), Aug (1-3-♯5)</li>
@@ -207,7 +219,9 @@
           </ul>
         </div>
         <div class="card col-6">
-          <h3 style="font-size: 1.1rem; color: var(--accent-purple); margin-bottom: 12px;">🥁 アレンジ・バンド構成ノート</h3>
+          <h3 style="font-size: 1.1rem; color: var(--accent-purple); margin-bottom: 12px;">
+            <i class="fa-solid fa-drum"></i> アレンジ・バンド構成ノート
+          </h3>
           <ul style="padding-left: 20px; line-height: 1.8; color: var(--text-muted); font-size: 0.9rem;">
             <li><strong>ドラム:</strong> Kick (表拍/リズム核), Snare (2・4拍), Hi-hat (8/16分刻み), Fill (セクション繋ぎ)</li>
             <li><strong>ベース:</strong> ルート維持 / 5度・経過音 / キックとの同期（動かしすぎない）</li>
@@ -221,7 +235,9 @@
     <!-- Panel 6: Settings -->
     <section id="view-settings" class="view-panel">
       <div class="card col-8">
-        <h3 style="font-size: 1.1rem; color: #ffffff; margin-bottom: 16px;">GitHub & VPS 連携設定</h3>
+        <h3 style="font-size: 1.1rem; color: #ffffff; margin-bottom: 16px;">
+          <i class="fa-solid fa-sliders" style="color: var(--primary-cyan); margin-right: 6px;"></i> GitHub & VPS 連携設定
+        </h3>
         <div class="form-group">
           <label class="form-label">GitHub Personal Access Token (PAT) [オプション]</label>
           <input type="password" id="pat-input" class="form-control" placeholder="ghp_xxxxxxxxxxxx" value="">
@@ -253,7 +269,9 @@ chmod +x vps/deploy.sh
 <div id="new-log-modal" class="modal-overlay">
   <div class="modal-box">
     <div class="modal-header">
-      <h3 style="color: #ffffff; font-size: 1.15rem;">✍️ 新規学習ログ・進捗メモの入力</h3>
+      <h3 style="color: #ffffff; font-size: 1.15rem;">
+        <i class="fa-solid fa-feather-pointed" style="color: var(--primary-cyan); margin-right: 6px;"></i> 新規学習ログ・進捗メモの入力
+      </h3>
       <button class="modal-close-btn" onclick="window.app.closeNewLogModal()">✕</button>
     </div>
     
@@ -313,7 +331,7 @@ chmod +x vps/deploy.sh
 
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 20px;">
       <button class="btn btn-secondary" style="font-size: 0.82rem;" onclick="window.app.openGitHubIssueNewWindow()">
-        🔗 GitHub Issueとして開く
+        <i class="fa-brands fa-github"></i> GitHub Issueとして開く
       </button>
       <div style="display: flex; gap: 10px;">
         <button class="btn btn-secondary" onclick="window.app.closeNewLogModal()">キャンセル</button>
@@ -327,7 +345,9 @@ chmod +x vps/deploy.sh
 <div id="prompt-modal" class="modal-overlay">
   <div class="modal-box">
     <div class="modal-header">
-      <h3 style="color: #ffffff; font-size: 1.15rem;">🤖 ChatGPT連携用 ログ作成テンプレート</h3>
+      <h3 style="color: #ffffff; font-size: 1.15rem;">
+        <i class="fa-solid fa-robot" style="color: var(--primary-cyan); margin-right: 6px;"></i> ChatGPT連携用 ログ作成テンプレート
+      </h3>
       <button class="modal-close-btn" onclick="window.app.closePromptModal()">✕</button>
     </div>
     <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 16px;">
@@ -336,14 +356,15 @@ chmod +x vps/deploy.sh
     <div class="form-group">
       <textarea id="prompt-template-area" class="form-control" readonly style="height: 160px; font-family: monospace; font-size: 0.82rem;">
 【本日の1時間作曲学習ログ】
-・日付 / Week：
+・対象: Month 1 Week 1 Day X
+・タイトル: [Month 1 Week 1 Day X] 
 ・学習テーマ：
 ・学んだ理論・気づき：
 ・分析した既存曲：
 ・Studio One / ギターでの実践内容：
 ・自作曲への応用アイデア：
 
-上記についてGitHub Issue登録・振り返りフィードバックをお願いします。
+上記についてGitHub Issue ([Month 1 Week 1 Day X] 形式のタイトル) の登録・更新およびフィードバックをお願いします。
       </textarea>
     </div>
     <div style="display: flex; justify-content: flex-end; gap: 12px;">
