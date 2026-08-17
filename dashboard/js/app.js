@@ -1,5 +1,5 @@
 /**
- * Main Application & SPA Controller with 3-Tier Issue Status (完了 / 進行中 / 未着手)
+ * Main Application & SPA Controller with Strict Real-Time 3-Tier Issue Status
  */
 
 class AppController {
@@ -31,11 +31,7 @@ class AppController {
 
   loadTaskState() {
     const saved = localStorage.getItem('songwriting_task_state');
-    const state = saved ? JSON.parse(saved) : {};
-    if (state['m1_w1_task'] === undefined) {
-      state['m1_w1_task'] = true; // Week 1 completed by default!
-    }
-    return state;
+    return saved ? JSON.parse(saved) : {};
   }
 
   saveTaskState() {
@@ -202,9 +198,9 @@ class AppController {
     if (window.githubManager && typeof window.githubManager.getIssueStatus === 'function') {
       return window.githubManager.getIssueStatus(issue);
     }
+
     const isClosed = issue.state === 'closed' || 
-      issue.number === 1 || issue.number === 2 ||
-      (issue.labels || []).some(l => ['完了', 'completed', 'done'].includes((l.name || '').toLowerCase()));
+      (issue.labels || []).some(l => ['完了', 'completed', 'done', 'closed'].includes((l.name || '').toLowerCase()));
     
     if (isClosed) return 'completed';
 

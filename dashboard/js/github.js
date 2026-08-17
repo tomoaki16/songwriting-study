@@ -49,37 +49,37 @@ class GitHubManager {
 
   /**
    * Determine exact issue status: 'completed' | 'in_progress' | 'unstarted'
-   * - 完了 (completed): closed or labeled '完了'
-   * - 進行中 (in_progress): has comments, body edits, or progress updates
-   * - 未着手 (unstarted): issue created with template, no updates/comments yet
+   * - 完了 (completed): closed or labeled '完了'/'completed'/'done'
+   * - 進行中 (in_progress): has comments (>0), body updates, checked items, or status label '進行中'
+   * - 未着手 (unstarted): issue created with template, no comments/updates yet
    */
   getIssueStatus(issue) {
-    // 1. Completed Check
+    // 1. Completed Check (state: closed or completion label)
     const isClosed = issue.state === 'closed' || 
-      issue.number === 1 || issue.number === 2 ||
-      (issue.labels || []).some(l => ['完了', 'completed', 'done'].includes((l.name || '').toLowerCase()));
+      (issue.labels || []).some(l => ['完了', 'completed', 'done', 'closed'].includes((l.name || '').toLowerCase()));
     
     if (isClosed) return 'completed';
 
-    // 2. In-Progress Check (must have content updates or comments or explicit label)
+    // 2. In-Progress Check (has comments, checked items, content updates, or status label)
     const commentsCount = typeof issue.comments === 'number' ? issue.comments : 0;
     const hasComments = commentsCount > 0;
     
     const labels = (issue.labels || []).map(l => (l.name || '').toLowerCase());
-    const hasInProgressLabel = labels.some(l => ['進行中', 'in-progress', 'doing', 'wip', '実践', '分析'].includes(l));
+    const hasInProgressLabel = labels.some(l => ['進行中', 'in-progress', 'doing', 'wip', '作業中'].includes(l));
     
-    const createdAt = issue.created_at ? new Date(issue.created_at).getTime() : 0;
-    const updatedAt = issue.updated_at ? new Date(issue.updated_at).getTime() : 0;
-    const isContentUpdated = (updatedAt - createdAt) > 60000;
-
     const body = (issue.body || '');
     const hasCheckedItems = body.includes('[x]') || body.includes('[X]');
 
-    if (hasComments || hasInProgressLabel || isContentUpdated || hasCheckedItems) {
+    // Check if updated_at is distinctly after created_at (> 5 minutes apart)
+    const createdAt = issue.created_at ? new Date(issue.created_at).getTime() : 0;
+    const updatedAt = issue.updated_at ? new Date(issue.updated_at).getTime() : 0;
+    const isContentUpdated = (updatedAt - createdAt) > 300000;
+
+    if (hasComments || hasInProgressLabel || hasCheckedItems || isContentUpdated) {
       return 'in_progress';
     }
 
-    // 3. Default: Unstarted (未着手)
+    // 3. Default: Unstarted (未着手: コメントや進捗更新が一度もない状態)
     return 'unstarted';
   }
 
@@ -127,16 +127,14 @@ class GitHubManager {
         id: 1,
         number: 1,
         title: '[Month 1 Week 1] 週次目標｜音名・音程・スケール',
-        state: 'closed',
-        comments: 1,
+        state: 'open',
+        comments: 0,
         html_url: `https://github.com/${GITHUB_REPO}/issues/1`,
         created_at: '2026-08-16T10:00:00Z',
-        updated_at: '2026-08-16T12:00:00Z',
-        body: '## 1日約1時間ログ\n- CメジャースケールをStudio Oneで入力＆ギター指板音確認\n- ドから見た完全5度（ソ）、長3度（ミ）の響きを実機検証。\n- 分析：好きな曲のキーがC Majorであることを確認。',
+        updated_at: '2026-08-16T10:00:00Z',
+        body: '## Week 1 の位置づけ\n- [ ] 12音、半音・全音、オクターブを説明できる',
         labels: [
-          { name: 'Month 1', color: '00f2fe' },
-          { name: '理論', color: '9d50bb' },
-          { name: '完了', color: '00f5a0' }
+          { name: 'Month 1', color: '00f2fe' }
         ]
       },
       {
@@ -144,7 +142,7 @@ class GitHubManager {
         number: 2,
         title: '[Month 1 Week 1 Day 1] 音名・半音/全音・メジャースケールの理解',
         state: 'closed',
-        comments: 2,
+        comments: 1,
         html_url: `https://github.com/${GITHUB_REPO}/issues/2`,
         created_at: '2026-08-15T14:30:00Z',
         updated_at: '2026-08-15T16:00:00Z',
