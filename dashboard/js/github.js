@@ -49,18 +49,18 @@ class GitHubManager {
 
   /**
    * Determine exact issue status: 'completed' | 'in_progress' | 'unstarted'
-   * - 完了 (completed): closed or labeled '完了'/'completed'/'done'
-   * - 進行中 (in_progress): has comments (>0), body updates, checked items, or status label '進行中'
-   * - 未着手 (unstarted): issue created with template, no comments/updates yet
+   * - 完了 (completed): closed state or has completion label ('完了'/'completed'/'done')
+   * - 進行中 (in_progress): MUST have progress comments (>0), checked items ('[x]'), or explicit status label ('進行中'/'doing'/'wip')
+   * - 未着手 (unstarted): issue created with no comments, no checked items, and no progress updates
    */
   getIssueStatus(issue) {
-    // 1. Completed Check (state: closed or completion label)
+    // 1. Completed Check
     const isClosed = issue.state === 'closed' || 
       (issue.labels || []).some(l => ['完了', 'completed', 'done', 'closed'].includes((l.name || '').toLowerCase()));
     
     if (isClosed) return 'completed';
 
-    // 2. In-Progress Check (has comments, checked items, content updates, or status label)
+    // 2. In-Progress Check (MUST have comments > 0, checked items '[x]', or explicit in-progress label)
     const commentsCount = typeof issue.comments === 'number' ? issue.comments : 0;
     const hasComments = commentsCount > 0;
     
@@ -70,16 +70,11 @@ class GitHubManager {
     const body = (issue.body || '');
     const hasCheckedItems = body.includes('[x]') || body.includes('[X]');
 
-    // Check if updated_at is distinctly after created_at (> 5 minutes apart)
-    const createdAt = issue.created_at ? new Date(issue.created_at).getTime() : 0;
-    const updatedAt = issue.updated_at ? new Date(issue.updated_at).getTime() : 0;
-    const isContentUpdated = (updatedAt - createdAt) > 300000;
-
-    if (hasComments || hasInProgressLabel || hasCheckedItems || isContentUpdated) {
+    if (hasComments || hasInProgressLabel || hasCheckedItems) {
       return 'in_progress';
     }
 
-    // 3. Default: Unstarted (未着手: コメントや進捗更新が一度もない状態)
+    // 3. Default: Unstarted (未着手: コメントも進行中ラベルもチェックもまだない状態)
     return 'unstarted';
   }
 
@@ -104,6 +99,7 @@ class GitHubManager {
 
       const data = await response.json();
       this.issues = data.filter(item => this.isStudyTaskIssue(item));
+      localStorage.setItem('songwriting_cached_issues', JSON.stringify(this.issues));
       this.loading = false;
       return { success: true, issues: this.issues };
     } catch (err) {

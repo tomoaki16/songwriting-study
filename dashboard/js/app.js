@@ -205,7 +205,15 @@ class AppController {
     if (isClosed) return 'completed';
 
     const commentsCount = typeof issue.comments === 'number' ? issue.comments : 0;
-    if (commentsCount > 0) return 'in_progress';
+    const hasComments = commentsCount > 0;
+    const labels = (issue.labels || []).map(l => (l.name || '').toLowerCase());
+    const hasInProgressLabel = labels.some(l => ['進行中', 'in-progress', 'doing', 'wip', '作業中'].includes(l));
+    const body = (issue.body || '');
+    const hasCheckedItems = body.includes('[x]') || body.includes('[X]');
+
+    if (hasComments || hasInProgressLabel || hasCheckedItems) {
+      return 'in_progress';
+    }
 
     return 'unstarted';
   }
