@@ -1,5 +1,5 @@
 /**
- * Main Application & SPA Controller with Enhanced Completed Task UI & Progress Summary Banners
+ * Main Application & SPA Controller with 3-Tier Issue Status (完了 / 進行中 / 未着手)
  */
 
 class AppController {
@@ -156,6 +156,7 @@ class AppController {
         created_at: log.created_at,
         html_url: '#',
         state: 'closed',
+        comments: 1,
         isLocal: true,
         labels: [{ name: log.tag || '学習ログ', color: '00f2fe' }]
       })),
@@ -197,10 +198,20 @@ class AppController {
     });
   }
 
-  isIssueCompleted(issue) {
-    return issue.state === 'closed' || 
+  getIssueStatus(issue) {
+    if (window.githubManager && typeof window.githubManager.getIssueStatus === 'function') {
+      return window.githubManager.getIssueStatus(issue);
+    }
+    const isClosed = issue.state === 'closed' || 
       issue.number === 1 || issue.number === 2 ||
       (issue.labels || []).some(l => ['完了', 'completed', 'done'].includes((l.name || '').toLowerCase()));
+    
+    if (isClosed) return 'completed';
+
+    const commentsCount = typeof issue.comments === 'number' ? issue.comments : 0;
+    if (commentsCount > 0) return 'in_progress';
+
+    return 'unstarted';
   }
 
   renderActiveMonthCurriculum() {
@@ -227,23 +238,45 @@ class AppController {
       const customNote = this.customWeeklyNotes[wId] || '';
       const matchedIssues = this.getIssuesForWeek(monthData.month, w.week);
       
-      const completedCount = matchedIssues.filter(i => this.isIssueCompleted(i)).length;
+      const completedCount = matchedIssues.filter(i => this.getIssueStatus(i) === 'completed').length;
+      const inProgressCount = matchedIssues.filter(i => this.getIssueStatus(i) === 'in_progress').length;
+      const unstartedCount = matchedIssues.filter(i => this.getIssueStatus(i) === 'unstarted').length;
       const percent = matchedIssues.length > 0 ? Math.round((completedCount / matchedIssues.length) * 100) : 0;
 
       const matchedIssuesHtml = matchedIssues.length > 0 ? matchedIssues.map(issue => {
-        const isCompleted = this.isIssueCompleted(issue);
+        const status = this.getIssueStatus(issue);
         
+        let cardBg = 'rgba(255,255,255,0.03)';
+        let borderLeftColor = 'var(--border-color)';
+        let statusBadge = '';
+        let titleIcon = '';
+
+        if (status === 'completed') {
+          cardBg = 'rgba(0, 245, 160, 0.12)';
+          borderLeftColor = 'var(--accent-green)';
+          statusBadge = `<span class="label-badge badge-completed"><i class="fa-solid fa-check"></i> 完了</span>`;
+          titleIcon = `<i class="fa-solid fa-circle-check" style="color: var(--accent-green); margin-right: 6px;"></i>`;
+        } else if (status === 'in_progress') {
+          cardBg = 'rgba(0, 242, 254, 0.08)';
+          borderLeftColor = 'var(--primary-cyan)';
+          statusBadge = `<span class="label-badge badge-in-progress"><i class="fa-solid fa-spinner fa-spin-pulse"></i> 進行中</span>`;
+          titleIcon = `<i class="fa-solid fa-clock-rotate-left" style="color: var(--primary-cyan); margin-right: 6px;"></i>`;
+        } else {
+          cardBg = 'rgba(255, 255, 255, 0.02)';
+          borderLeftColor = 'rgba(255,255,255,0.2)';
+          statusBadge = `<span class="label-badge badge-unstarted"><i class="fa-regular fa-circle"></i> 未着手</span>`;
+          titleIcon = `<i class="fa-regular fa-circle" style="color: var(--text-muted); margin-right: 6px;"></i>`;
+        }
+
         return `
-          <div style="background: ${isCompleted ? 'rgba(0, 245, 160, 0.12)' : 'rgba(255,255,255,0.04)'}; border-left: 4px solid ${isCompleted ? 'var(--accent-green)' : 'var(--primary-cyan)'}; border: ${isCompleted ? '1px solid rgba(0,245,160,0.35)' : 'none'}; border-radius: var(--radius-sm); padding: 10px 12px; margin-top: 8px; font-size: 0.84rem;">
+          <div style="background: ${cardBg}; border-left: 4px solid ${borderLeftColor}; border-radius: var(--radius-sm); padding: 10px 12px; margin-top: 8px; font-size: 0.84rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
               <a href="${issue.html_url}" target="${issue.isLocal ? '_self' : '_blank'}" style="color: #ffffff; font-weight: 700; text-decoration: none;">
-                ${isCompleted ? '<i class="fa-solid fa-circle-check" style="color: var(--accent-green); margin-right: 6px;"></i>' : '<i class="fa-regular fa-circle" style="color: var(--primary-cyan); margin-right: 6px;"></i>'}
+                ${titleIcon}
                 ${issue.isLocal ? '[ローカル]' : `#${issue.number}`} ${this.escapeHtml(issue.title)}
               </a>
               <div style="display: flex; align-items: center; gap: 8px;">
-                <span class="label-badge ${isCompleted ? 'badge-completed' : 'badge-active'}">
-                  ${isCompleted ? '<i class="fa-solid fa-check"></i> 完了' : '進行中'}
-                </span>
+                ${statusBadge}
                 <span style="font-size: 0.72rem; color: var(--text-muted);">${new Date(issue.created_at).toLocaleDateString('ja-JP')}</span>
               </div>
             </div>
@@ -313,7 +346,7 @@ class AppController {
             </div>
             ${matchedIssues.length > 0 ? `
               <div class="completed-progress-banner">
-                <span><i class="fa-solid fa-chart-pie"></i> 今週のタスク消化率: <strong>${completedCount} / ${matchedIssues.length} 件完了 (${percent}%)</strong></span>
+                <span><i class="fa-solid fa-chart-pie"></i> 今週のタスク進行: <strong>完了 ${completedCount} / 進行中 ${inProgressCount} / 未着手 ${unstartedCount} 件 (${percent}%)</strong></span>
                 ${percent === 100 ? '<span>🎉 今週の目標クリア！</span>' : ''}
               </div>
             ` : ''}
@@ -386,6 +419,7 @@ class AppController {
         created_at: log.created_at,
         html_url: '#',
         state: 'closed',
+        comments: 1,
         isLocal: true,
         labels: [{ name: log.tag || '学習ログ', color: '00f2fe' }]
       })),
@@ -407,9 +441,11 @@ class AppController {
     }
 
     if (statusFilter === 'completed') {
-      combinedLogs = combinedLogs.filter(item => this.isIssueCompleted(item));
-    } else if (statusFilter === 'open') {
-      combinedLogs = combinedLogs.filter(item => !this.isIssueCompleted(item));
+      combinedLogs = combinedLogs.filter(item => this.getIssueStatus(item) === 'completed');
+    } else if (statusFilter === 'in_progress') {
+      combinedLogs = combinedLogs.filter(item => this.getIssueStatus(item) === 'in_progress');
+    } else if (statusFilter === 'unstarted') {
+      combinedLogs = combinedLogs.filter(item => this.getIssueStatus(item) === 'unstarted');
     }
 
     if (combinedLogs.length === 0) {
@@ -442,22 +478,32 @@ class AppController {
         year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
       });
 
-      const isCompleted = this.isIssueCompleted(issue);
+      const status = this.getIssueStatus(issue);
       
       const labelsHtml = (issue.labels || []).map(l => 
         `<span class="label-badge" style="border-left: 2px solid #${l.color || '00f2fe'};">${this.escapeHtml(l.name)}</span>`
       ).join('');
 
-      const statusBadge = isCompleted 
-        ? `<span class="label-badge badge-completed"><i class="fa-solid fa-circle-check"></i> 完了</span>`
-        : `<span class="label-badge badge-active"><i class="fa-solid fa-spinner"></i> 進行中</span>`;
+      let statusBadge = '';
+      let titleIcon = '';
+      let cardClass = '';
 
-      const titleIcon = isCompleted 
-        ? `<i class="fa-solid fa-circle-check" style="color: var(--accent-green); margin-right: 6px;"></i>` 
-        : `<i class="fa-regular fa-circle" style="color: var(--primary-cyan); margin-right: 6px;"></i>`;
+      if (status === 'completed') {
+        statusBadge = `<span class="label-badge badge-completed"><i class="fa-solid fa-circle-check"></i> 完了</span>`;
+        titleIcon = `<i class="fa-solid fa-circle-check" style="color: var(--accent-green); margin-right: 6px;"></i>`;
+        cardClass = 'issue-completed';
+      } else if (status === 'in_progress') {
+        statusBadge = `<span class="label-badge badge-in-progress"><i class="fa-solid fa-spinner fa-spin-pulse"></i> 進行中</span>`;
+        titleIcon = `<i class="fa-solid fa-clock-rotate-left" style="color: var(--primary-cyan); margin-right: 6px;"></i>`;
+        cardClass = 'issue-in-progress';
+      } else {
+        statusBadge = `<span class="label-badge badge-unstarted"><i class="fa-regular fa-circle"></i> 未着手</span>`;
+        titleIcon = `<i class="fa-regular fa-circle" style="color: var(--text-muted); margin-right: 6px;"></i>`;
+        cardClass = 'issue-unstarted';
+      }
 
       return `
-        <div class="issue-card ${isCompleted ? 'issue-completed' : 'issue-active'}">
+        <div class="issue-card ${cardClass}">
           <div class="issue-header">
             <div>
               ${titleIcon}
@@ -485,12 +531,12 @@ class AppController {
     if (!container) return;
 
     const all = [
-      ...this.localDailyLogs.map(l => ({ title: l.title, created_at: l.created_at, url: '#', isCompleted: true })),
+      ...this.localDailyLogs.map(l => ({ title: l.title, created_at: l.created_at, url: '#', status: 'completed' })),
       ...(window.githubManager.issues || []).map(i => ({ 
         title: `#${i.number} ${i.title}`, 
         created_at: i.created_at, 
         url: i.html_url,
-        isCompleted: this.isIssueCompleted(i)
+        status: this.getIssueStatus(i)
       }))
     ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 4);
 
@@ -499,20 +545,37 @@ class AppController {
       return;
     }
 
-    container.innerHTML = all.map(item => `
-      <div style="padding: 10px 12px; background: ${item.isCompleted ? 'rgba(0, 245, 160, 0.12)' : 'rgba(255,255,255,0.03)'}; border-left: 4px solid ${item.isCompleted ? 'var(--accent-green)' : 'var(--primary-cyan)'}; border-radius: var(--radius-md); margin-bottom: 6px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
-        <a href="${item.url}" target="_blank" style="color: #ffffff; font-weight: 600; text-decoration: none;">
-          ${item.isCompleted ? '<i class="fa-solid fa-circle-check" style="color: var(--accent-green); margin-right: 6px;"></i>' : ''}
-          ${this.escapeHtml(item.title)}
-        </a>
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <span class="label-badge ${item.isCompleted ? 'badge-completed' : 'badge-active'}" style="font-size: 0.65rem; padding: 2px 6px;">
-            ${item.isCompleted ? '完了' : '進行中'}
-          </span>
-          <span style="font-size: 0.75rem; color: var(--text-dim);">${new Date(item.created_at).toLocaleDateString('ja-JP')}</span>
+    container.innerHTML = all.map(item => {
+      let statusBadge = '';
+      let itemBg = 'rgba(255,255,255,0.03)';
+      let borderLeft = 'var(--border-color)';
+
+      if (item.status === 'completed') {
+        statusBadge = `<span class="label-badge badge-completed" style="font-size: 0.65rem; padding: 2px 6px;">完了</span>`;
+        itemBg = 'rgba(0, 245, 160, 0.12)';
+        borderLeft = 'var(--accent-green)';
+      } else if (item.status === 'in_progress') {
+        statusBadge = `<span class="label-badge badge-in-progress" style="font-size: 0.65rem; padding: 2px 6px;">進行中</span>`;
+        itemBg = 'rgba(0, 242, 254, 0.08)';
+        borderLeft = 'var(--primary-cyan)';
+      } else {
+        statusBadge = `<span class="label-badge badge-unstarted" style="font-size: 0.65rem; padding: 2px 6px;">未着手</span>`;
+        itemBg = 'rgba(255, 255, 255, 0.02)';
+        borderLeft = 'rgba(255,255,255,0.2)';
+      }
+
+      return `
+        <div style="padding: 10px 12px; background: ${itemBg}; border-left: 4px solid ${borderLeft}; border-radius: var(--radius-md); margin-bottom: 6px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+          <a href="${item.url}" target="_blank" style="color: #ffffff; font-weight: 600; text-decoration: none;">
+            ${this.escapeHtml(item.title)}
+          </a>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            ${statusBadge}
+            <span style="font-size: 0.75rem; color: var(--text-dim);">${new Date(item.created_at).toLocaleDateString('ja-JP')}</span>
+          </div>
         </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   }
 
   /* Log Input Modal Handler */
@@ -591,7 +654,7 @@ class AppController {
   }
 
   copyPromptTemplate() {
-    const promptText = `【本日の1時間作曲学習ログ】\n・対象: Month ${this.activeMonth}\n・タイトル: [Month ${this.activeMonth} Week X Day Y] \n・学習テーマ：\n・学んだ理論・気づき：\n・分析した既存曲：\n・Studio One / ギターでの実践内容：\n・自作曲への応用アイデア：\n\n上記について学習完了の評価を行い、GitHub Issue ([Month ${this.activeMonth} Week X Day Y] 形式のタイトル、'完了' ラベル付与またはstate:closed) の登録・更新をお願いします。`;
+    const promptText = `【本日の1時間作曲学習ログ】\n・対象: Month ${this.activeMonth}\n・タイトル: [Month ${this.activeMonth} Week X Day Y] \n・学習テーマ：\n・学んだ理論・気づき：\n・分析した既存曲：\n・Studio One / ギターでの実践内容：\n・自作曲への応用アイデア：\n\n上記について評価・フィードバックを行い、該当Issueの更新（進捗メモ追記またはコメント追加で「進行中」へ変更、学習完了時は「完了」ラベル付与またはstate:closed）をお願いします。`;
     navigator.clipboard.writeText(promptText);
     alert('ChatGPT用学習ログプロンプトをコピーしました！');
   }

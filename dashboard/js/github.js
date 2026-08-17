@@ -33,7 +33,7 @@ class GitHubManager {
     const title = (item.title || '').toLowerCase();
     const labels = (item.labels || []).map(l => (l.name || '').toLowerCase());
 
-    // 1. Exclude maintenance, infrastructure, chore, bug, refactor, admin tasks
+    // Exclude maintenance, infrastructure, chore, bug, refactor, admin tasks
     const excludeKeywords = ['maintenance', 'setup', 'infra', 'chore', 'bug', 'refactor', 'admin', 'ignore', 'ci/cd', 'wontfix', 'duplicate', 'invalid', 'メンテナンス', '環境構築', 'インフラ', 'バグ修正', 'リファクタリング'];
     
     if (labels.some(l => excludeKeywords.includes(l))) {
@@ -45,6 +45,42 @@ class GitHubManager {
     }
 
     return true;
+  }
+
+  /**
+   * Determine exact issue status: 'completed' | 'in_progress' | 'unstarted'
+   * - 完了 (completed): closed or labeled '完了'
+   * - 進行中 (in_progress): has comments, body edits, or progress updates
+   * - 未着手 (unstarted): issue created with template, no updates/comments yet
+   */
+  getIssueStatus(issue) {
+    // 1. Completed Check
+    const isClosed = issue.state === 'closed' || 
+      issue.number === 1 || issue.number === 2 ||
+      (issue.labels || []).some(l => ['完了', 'completed', 'done'].includes((l.name || '').toLowerCase()));
+    
+    if (isClosed) return 'completed';
+
+    // 2. In-Progress Check (must have content updates or comments or explicit label)
+    const commentsCount = typeof issue.comments === 'number' ? issue.comments : 0;
+    const hasComments = commentsCount > 0;
+    
+    const labels = (issue.labels || []).map(l => (l.name || '').toLowerCase());
+    const hasInProgressLabel = labels.some(l => ['進行中', 'in-progress', 'doing', 'wip', '実践', '分析'].includes(l));
+    
+    const createdAt = issue.created_at ? new Date(issue.created_at).getTime() : 0;
+    const updatedAt = issue.updated_at ? new Date(issue.updated_at).getTime() : 0;
+    const isContentUpdated = (updatedAt - createdAt) > 60000;
+
+    const body = (issue.body || '');
+    const hasCheckedItems = body.includes('[x]') || body.includes('[X]');
+
+    if (hasComments || hasInProgressLabel || isContentUpdated || hasCheckedItems) {
+      return 'in_progress';
+    }
+
+    // 3. Default: Unstarted (未着手)
+    return 'unstarted';
   }
 
   async fetchIssues() {
@@ -92,8 +128,10 @@ class GitHubManager {
         number: 1,
         title: '[Month 1 Week 1] 週次目標｜音名・音程・スケール',
         state: 'closed',
+        comments: 1,
         html_url: `https://github.com/${GITHUB_REPO}/issues/1`,
         created_at: '2026-08-16T10:00:00Z',
+        updated_at: '2026-08-16T12:00:00Z',
         body: '## 1日約1時間ログ\n- CメジャースケールをStudio Oneで入力＆ギター指板音確認\n- ドから見た完全5度（ソ）、長3度（ミ）の響きを実機検証。\n- 分析：好きな曲のキーがC Majorであることを確認。',
         labels: [
           { name: 'Month 1', color: '00f2fe' },
@@ -106,8 +144,10 @@ class GitHubManager {
         number: 2,
         title: '[Month 1 Week 1 Day 1] 音名・半音/全音・メジャースケールの理解',
         state: 'closed',
+        comments: 2,
         html_url: `https://github.com/${GITHUB_REPO}/issues/2`,
         created_at: '2026-08-15T14:30:00Z',
+        updated_at: '2026-08-15T16:00:00Z',
         body: 'Cmaj7 と C7 の3度・7度の配置を比較。ボイシング変更による緊張感の違いをDAWとギターで確認した。',
         labels: [
           { name: 'Month 1', color: '00f2fe' },
@@ -151,24 +191,32 @@ class GitHubManager {
         year: 'numeric', month: 'short', day: 'numeric'
       });
 
-      const isCompleted = issue.state === 'closed' || 
-        issue.number === 1 || issue.number === 2 ||
-        (issue.labels || []).some(l => ['完了', 'completed', 'done'].includes((l.name || '').toLowerCase()));
+      const status = this.getIssueStatus(issue);
       
       const labelsHtml = (issue.labels || []).map(l => 
         `<span class="label-badge" style="border-left: 2px solid #${l.color || '00f2fe'};">${this.escapeHtml(l.name)}</span>`
       ).join('');
 
-      const statusBadge = isCompleted 
-        ? `<span class="label-badge badge-completed"><i class="fa-solid fa-circle-check"></i> 完了</span>`
-        : `<span class="label-badge badge-active"><i class="fa-solid fa-spinner"></i> 進行中</span>`;
+      let statusBadge = '';
+      let titleIcon = '';
+      let cardClass = '';
 
-      const titleIcon = isCompleted 
-        ? `<i class="fa-solid fa-circle-check" style="color: var(--accent-green); margin-right: 6px;"></i>` 
-        : `<i class="fa-regular fa-circle" style="color: var(--primary-cyan); margin-right: 6px;"></i>`;
+      if (status === 'completed') {
+        statusBadge = `<span class="label-badge badge-completed"><i class="fa-solid fa-circle-check"></i> 完了</span>`;
+        titleIcon = `<i class="fa-solid fa-circle-check" style="color: var(--accent-green); margin-right: 6px;"></i>`;
+        cardClass = 'issue-completed';
+      } else if (status === 'in_progress') {
+        statusBadge = `<span class="label-badge badge-in-progress"><i class="fa-solid fa-spinner fa-spin-pulse"></i> 進行中</span>`;
+        titleIcon = `<i class="fa-solid fa-clock-rotate-left" style="color: var(--primary-cyan); margin-right: 6px;"></i>`;
+        cardClass = 'issue-in-progress';
+      } else {
+        statusBadge = `<span class="label-badge badge-unstarted"><i class="fa-regular fa-circle"></i> 未着手</span>`;
+        titleIcon = `<i class="fa-regular fa-circle" style="color: var(--text-muted); margin-right: 6px;"></i>`;
+        cardClass = 'issue-unstarted';
+      }
 
       return `
-        <div class="issue-card ${isCompleted ? 'issue-completed' : 'issue-active'}">
+        <div class="issue-card ${cardClass}">
           <div class="issue-header">
             <a href="${issue.html_url}" target="_blank" class="issue-title">
               ${titleIcon} #${issue.number} ${this.escapeHtml(issue.title)}

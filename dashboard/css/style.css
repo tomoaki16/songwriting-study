@@ -508,15 +508,24 @@ code, pre, .mono-font {
   box-shadow: 0 4px 18px rgba(0, 245, 160, 0.12);
 }
 
-.issue-card.issue-active {
+.issue-card.issue-in-progress {
   border-left: 5px solid var(--primary-cyan) !important;
-  background: linear-gradient(135deg, rgba(0, 242, 254, 0.05), rgba(15, 23, 42, 0.9)) !important;
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.08), rgba(15, 23, 42, 0.9)) !important;
+  border: 1px solid rgba(0, 242, 254, 0.3);
+  box-shadow: 0 2px 12px rgba(0, 242, 254, 0.08);
+}
+
+.issue-card.issue-unstarted {
+  border-left: 5px solid rgba(255, 255, 255, 0.25) !important;
+  background: rgba(255, 255, 255, 0.02) !important;
   border: 1px solid var(--border-color);
+  opacity: 0.82;
 }
 
 .issue-card:hover {
   border-color: var(--border-color-glow);
   transform: translateX(4px);
+  opacity: 1;
 }
 
 .badge-completed {
@@ -529,12 +538,22 @@ code, pre, .mono-font {
   letter-spacing: 0.5px;
 }
 
-.badge-active {
-  background: rgba(0, 242, 254, 0.15) !important;
+.badge-in-progress {
+  background: rgba(0, 242, 254, 0.18) !important;
   color: var(--primary-cyan) !important;
-  border: 1px solid rgba(0, 242, 254, 0.4);
+  border: 1px solid rgba(0, 242, 254, 0.5);
   font-weight: 700 !important;
+  padding: 3px 9px !important;
+  border-radius: 12px;
+}
+
+.badge-unstarted {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--text-muted) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  font-weight: 600 !important;
   padding: 3px 8px !important;
+  border-radius: 12px;
 }
 
 .completed-progress-banner {
