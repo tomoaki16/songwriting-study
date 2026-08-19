@@ -1,5 +1,5 @@
 /**
- * Main Application & SPA Controller with Strict Real-Time 3-Tier Issue Status
+ * Main Application & SPA Controller with Chronological Issue Sorting & Active Status Filter
  */
 
 class AppController {
@@ -89,13 +89,19 @@ class AppController {
     if (statusSelect) {
       statusSelect.addEventListener('change', () => this.triggerIssueFilters());
     }
+
+    const sortSelect = document.getElementById('issue-sort-select');
+    if (sortSelect) {
+      sortSelect.addEventListener('change', () => this.triggerIssueFilters());
+    }
   }
 
   triggerIssueFilters() {
     const searchTerm = document.getElementById('issue-search-input')?.value || '';
     const labelFilter = document.getElementById('issue-label-select')?.value || 'all';
-    const statusFilter = document.getElementById('issue-status-select')?.value || 'all';
-    this.renderAllIssuesAndLogs(searchTerm, labelFilter, statusFilter);
+    const statusFilter = document.getElementById('issue-status-select')?.value || 'active';
+    const sortOrder = document.getElementById('issue-sort-select')?.value || 'asc';
+    this.renderAllIssuesAndLogs(searchTerm, labelFilter, statusFilter, sortOrder);
   }
 
   switchView(viewId) {
@@ -380,8 +386,12 @@ class AppController {
     const searchInput = document.getElementById('issue-search-input');
     if (searchInput) {
       searchInput.value = `Week ${weekNum}`;
-      this.triggerIssueFilters();
     }
+    const statusSelect = document.getElementById('issue-status-select');
+    if (statusSelect) {
+      statusSelect.value = 'all'; // Show all for week search
+    }
+    this.triggerIssueFilters();
   }
 
   updateWeeklyNote(weekId, text) {
@@ -410,7 +420,7 @@ class AppController {
     if (completedSongsEl) completedSongsEl.textContent = `${completedSongs} / 5`;
   }
 
-  renderAllIssuesAndLogs(searchTerm = '', labelFilter = 'all', statusFilter = 'all') {
+  renderAllIssuesAndLogs(searchTerm = '', labelFilter = 'all', statusFilter = 'active', sortOrder = 'asc') {
     const container = document.getElementById('github-issues-container');
     if (!container) return;
 
@@ -444,7 +454,10 @@ class AppController {
       );
     }
 
-    if (statusFilter === 'completed') {
+    // Default statusFilter is 'active' (Hide completed issues by default!)
+    if (statusFilter === 'active') {
+      combinedLogs = combinedLogs.filter(item => this.getIssueStatus(item) !== 'completed');
+    } else if (statusFilter === 'completed') {
       combinedLogs = combinedLogs.filter(item => this.getIssueStatus(item) === 'completed');
     } else if (statusFilter === 'in_progress') {
       combinedLogs = combinedLogs.filter(item => this.getIssueStatus(item) === 'in_progress');
@@ -461,21 +474,34 @@ class AppController {
       return;
     }
 
-    // If searching for a week, sort ascending (Day 1 -> Day 2 -> Day 3)
-    if (searchTerm.toLowerCase().includes('week')) {
-      combinedLogs.sort((a, b) => {
-        const matchA = (a.title.match(/Day\s*(\d+)/i) || a.body.match(/Day\s*(\d+)/i) || [])[1];
-        const matchB = (b.title.match(/Day\s*(\d+)/i) || b.body.match(/Day\s*(\d+)/i) || [])[1];
+    // Default Sorting: Chronological Order (古い順: Month 1 -> Week 1 -> Day 1 -> Day 2 ... -> Week 2 Day 1 ...)
+    combinedLogs.sort((a, b) => {
+      // Month
+      const monthA = parseInt((a.title.match(/Month\s*(\d+)/i) || a.body.match(/Month\s*(\d+)/i) || [])[1] || 999, 10);
+      const monthB = parseInt((b.title.match(/Month\s*(\d+)/i) || b.body.match(/Month\s*(\d+)/i) || [])[1] || 999, 10);
+      if (monthA !== monthB) {
+        return sortOrder === 'asc' ? monthA - monthB : monthB - monthA;
+      }
 
-        if (matchA && matchB) return parseInt(matchA, 10) - parseInt(matchB, 10);
-        if (matchA) return -1;
-        if (matchB) return 1;
+      // Week
+      const weekA = parseInt((a.title.match(/Week\s*(\d+)/i) || a.body.match(/Week\s*(\d+)/i) || [])[1] || 999, 10);
+      const weekB = parseInt((b.title.match(/Week\s*(\d+)/i) || b.body.match(/Week\s*(\d+)/i) || [])[1] || 999, 10);
+      if (weekA !== weekB) {
+        return sortOrder === 'asc' ? weekA - weekB : weekB - weekA;
+      }
 
-        const numA = typeof a.number === 'number' ? a.number : a.id;
-        const numB = typeof b.number === 'number' ? b.number : b.id;
-        return numA - numB;
-      });
-    }
+      // Day
+      const dayA = parseInt((a.title.match(/Day\s*(\d+)/i) || a.body.match(/Day\s*(\d+)/i) || [])[1] || 999, 10);
+      const dayB = parseInt((b.title.match(/Day\s*(\d+)/i) || b.body.match(/Day\s*(\d+)/i) || [])[1] || 999, 10);
+      if (dayA !== dayB) {
+        return sortOrder === 'asc' ? dayA - dayB : dayB - dayA;
+      }
+
+      // Secondary sort by issue number or creation date
+      const numA = typeof a.number === 'number' ? a.number : (parseInt(a.id, 10) || 0);
+      const numB = typeof b.number === 'number' ? b.number : (parseInt(b.id, 10) || 0);
+      return sortOrder === 'asc' ? numA - numB : numB - numA;
+    });
 
     container.innerHTML = combinedLogs.map(issue => {
       const dateStr = new Date(issue.created_at).toLocaleDateString('ja-JP', {

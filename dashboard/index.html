@@ -170,13 +170,18 @@
     <section id="view-issues" class="view-panel">
       <div class="issue-filter-bar">
         <input type="text" id="issue-search-input" class="search-input" placeholder="ログ・キーワードを検索（例: ダイアトニック, メロディ, ドラム...）">
-        <select id="issue-status-select" class="search-input" style="max-width: 150px;">
-          <option value="all">すべての状態</option>
-          <option value="completed">✓ 完了</option>
-          <option value="in_progress">⚡ 進行中</option>
-          <option value="unstarted">⚪ 未着手</option>
+        <select id="issue-status-select" class="search-input" style="max-width: 220px;">
+          <option value="active" selected>⚡進行中＆⚪未着手 (完了非表示)</option>
+          <option value="all">すべての状態 (完了含む)</option>
+          <option value="in_progress">⚡ 進行中のみ</option>
+          <option value="unstarted">⚪ 未着手のみ</option>
+          <option value="completed">✓ 完了のみ</option>
         </select>
-        <select id="issue-label-select" class="search-input" style="max-width: 150px;">
+        <select id="issue-sort-select" class="search-input" style="max-width: 180px;">
+          <option value="asc" selected>⬆️ 古い順 (W1D1→...)</option>
+          <option value="desc">⬇️ 新しい順</option>
+        </select>
+        <select id="issue-label-select" class="search-input" style="max-width: 140px;">
           <option value="all">すべてのタグ</option>
           <option value="理論">理論</option>
           <option value="分析">分析</option>
