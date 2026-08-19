@@ -1,5 +1,5 @@
 /**
- * Main Application & SPA Controller with Chronological Issue Sorting & Active Status Filter
+ * Main Application & SPA Controller with Strict Week-Issue Matching & Chronological Sorting
  */
 
 class AppController {
@@ -145,8 +145,8 @@ class AppController {
   }
 
   /**
-   * Match GitHub Issues and local logs for a specific Month and Week
-   * Sorted chronologically from top to bottom (Day 1 -> Day 2 -> Day 3)
+   * Match GitHub Issues and local logs for a specific Month and Week strictly.
+   * Prevents "Week 1" from matching "Week 10", "Week 11", etc. via word boundary regex \bWeek\s*(\d+)\b
    */
   getIssuesForWeek(monthNum, weekNum) {
     const allIssues = [
@@ -165,19 +165,24 @@ class AppController {
       ...(window.githubManager.issues || [])
     ];
 
-    const weekPattern1 = `Month ${monthNum} Week ${weekNum}`.toLowerCase();
-    const weekPattern2 = `Week ${weekNum}`.toLowerCase();
-
     const filtered = allIssues.filter(issue => {
-      const titleLower = (issue.title || '').toLowerCase();
-      const bodyLower = (issue.body || '').toLowerCase();
-      const labels = (issue.labels || []).map(l => (l.name || '').toLowerCase());
+      const title = issue.title || '';
+      const body = issue.body || '';
+      const labels = (issue.labels || []).map(l => l.name || '').join(' ');
+      const fullText = `${title} ${labels}`;
 
-      if (titleLower.includes(weekPattern1) || titleLower.includes(weekPattern2)) return true;
-      if (labels.includes(weekPattern2) || labels.includes(`week${weekNum}`)) return true;
+      // If Month is specified in title/label, check if it matches monthNum
+      const monthMatch = fullText.match(/\bMonth\s*(\d+)\b/i);
+      if (monthMatch) {
+        const issueMonth = parseInt(monthMatch[1], 10);
+        if (issueMonth !== monthNum) return false;
+      }
 
-      if (labels.includes(`month ${monthNum}`) && (titleLower.includes(`week ${weekNum}`) || bodyLower.includes(`week ${weekNum}`))) {
-        return true;
+      // Extract Week number strictly using word boundary regex \bWeek\s*(\d+)\b
+      const weekMatch = fullText.match(/\bWeek\s*(\d+)\b/i) || body.match(/\bWeek\s*(\d+)\b/i);
+      if (weekMatch) {
+        const issueWeek = parseInt(weekMatch[1], 10);
+        return issueWeek === weekNum;
       }
 
       return false;
@@ -441,11 +446,22 @@ class AppController {
     ];
 
     if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      combinedLogs = combinedLogs.filter(item => 
-        item.title.toLowerCase().includes(term) || 
-        (item.body && item.body.toLowerCase().includes(term))
-      );
+      const term = searchTerm.trim().toLowerCase();
+      // Strict regex matching for "week X" search to prevent "week 1" matching "week 10", "week 11" etc.
+      const weekSearchMatch = term.match(/^week\s*(\d+)$/i);
+      if (weekSearchMatch) {
+        const targetWeek = parseInt(weekSearchMatch[1], 10);
+        combinedLogs = combinedLogs.filter(item => {
+          const text = `${item.title} ${(item.labels||[]).map(l=>l.name).join(' ')} ${item.body}`;
+          const wMatch = text.match(/\bWeek\s*(\d+)\b/i);
+          return wMatch && parseInt(wMatch[1], 10) === targetWeek;
+        });
+      } else {
+        combinedLogs = combinedLogs.filter(item => 
+          item.title.toLowerCase().includes(term) || 
+          (item.body && item.body.toLowerCase().includes(term))
+        );
+      }
     }
 
     if (labelFilter !== 'all') {
@@ -474,7 +490,7 @@ class AppController {
       return;
     }
 
-    // Default Sorting: Chronological Order (古い順: Month 1 -> Week 1 -> Day 1 -> Day 2 ... -> Week 2 Day 1 ...)
+    // Chronological Order Sorting (Month 1 -> Week 1 -> Day 1 -> Day 2 ... -> Week 2 Day 1 ...)
     combinedLogs.sort((a, b) => {
       // Month
       const monthA = parseInt((a.title.match(/Month\s*(\d+)/i) || a.body.match(/Month\s*(\d+)/i) || [])[1] || 999, 10);
