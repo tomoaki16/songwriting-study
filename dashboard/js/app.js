@@ -1,5 +1,5 @@
 /**
- * Main Application & SPA Controller with Strict Week-Issue Matching & Chronological Sorting
+ * Main Application & SPA Controller with Strict Week-Issue Matching, Chronological Sorting, and Cumulative Study Time Calculation
  */
 
 class AppController {
@@ -23,6 +23,7 @@ class AppController {
       this.renderActiveMonthCurriculum(); // Re-render curriculum so week-matched issues display!
       this.renderAllIssuesAndLogs();
       this.renderLatestLogs();
+      this.updateDashboardStats();
     });
     
     window.songManager.renderSongPipeline('song-pipeline-container');
@@ -229,12 +230,70 @@ class AppController {
     return 'unstarted';
   }
 
+  /**
+   * Calculate cumulative study time from all active/completed issues and logs.
+   * Parses explicit time expressions (e.g. "学習時間: 1.5時間", "90分", "2h30m")
+   * and defaults to 1.0 hour for active/completed study issues without explicit notes.
+   */
+  calculateTotalStudyTime() {
+    const allIssues = [
+      ...this.localDailyLogs.map(log => ({
+        title: log.title || '',
+        body: log.body || '',
+        state: 'closed',
+        comments: 1
+      })),
+      ...(window.githubManager.issues || [])
+    ];
+
+    let totalHours = 0;
+
+    allIssues.forEach(issue => {
+      const status = this.getIssueStatus(issue);
+      if (status === 'unstarted') return; // Skip unstarted issues
+
+      const text = `${issue.title || ''} ${issue.body || ''}`;
+      let hoursFound = 0;
+
+      // Pattern 1: X時間Y分 (e.g. 1時間30分, 2時間15分)
+      const comboMatch = text.match(/(\d+(?:\.\d+)?)\s*時間\s*(\d+)\s*分/i);
+      if (comboMatch) {
+        hoursFound = parseFloat(comboMatch[1]) + (parseInt(comboMatch[2], 10) / 60);
+      } else {
+        // Pattern 2: X時間 or X.X時間 or Xh or X.Xh
+        const hourMatch = text.match(/(?:学習時間|勉強時間|作業時間|時間|タイム|実績)[：:\s=]*(\d+(?:\.\d+)?)\s*(?:時間|h|hrs?|hours?)/i) ||
+                          text.match(/(\d+(?:\.\d+)?)\s*(?:時間|h|hrs?)/i);
+        if (hourMatch) {
+          hoursFound = parseFloat(hourMatch[1]);
+        } else {
+          // Pattern 3: X分 or Xmins
+          const minMatch = text.match(/(?:学習時間|勉強時間|作業時間|時間|タイム|実績)[：:\s=]*(\d+)\s*(?:分|m|mins?)/i) ||
+                           text.match(/(\d+)\s*(?:分|mins?)/i);
+          if (minMatch) {
+            hoursFound = parseInt(minMatch[1], 10) / 60;
+          }
+        }
+      }
+
+      if (hoursFound > 0) {
+        totalHours += hoursFound;
+      } else if (status === 'completed' || status === 'in_progress') {
+        // Baseline fallback: 1.0 hour per active/completed study task issue
+        totalHours += 1.0;
+      }
+    });
+
+    return Math.round(totalHours * 10) / 10;
+  }
+
   renderActiveMonthCurriculum() {
     const container = document.getElementById('curriculum-month-detail');
     if (!container || !this.curriculumData) return;
 
     const monthData = this.curriculumData.months.find(m => m.month === this.activeMonth);
     if (!monthData) return;
+
+    const grandTotalHours = this.calculateTotalStudyTime();
 
     let html = `
       <div class="card" style="margin-bottom: 20px;">
@@ -243,6 +302,12 @@ class AppController {
             <span class="week-badge" style="margin-bottom: 6px;">Month ${monthData.month}</span>
             <h2 style="font-size: 1.3rem; color: #ffffff;">${monthData.title}</h2>
             <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 4px; line-height: 1.5;">${monthData.goal}</p>
+          </div>
+          <div style="background: rgba(245, 158, 11, 0.12); border: 1px solid var(--accent-amber); border-radius: var(--radius-md); padding: 8px 14px; text-align: right;">
+            <div style="font-size: 0.75rem; color: var(--accent-amber); font-weight: 600;">
+              <i class="fa-solid fa-clock"></i> 全累計学習時間
+            </div>
+            <div style="font-size: 1.25rem; font-weight: 700; color: #ffffff;">${grandTotalHours} 時間</div>
           </div>
         </div>
       </div>
@@ -419,6 +484,10 @@ class AppController {
     const fillEl = document.getElementById('overall-progress-fill');
     if (percentEl) percentEl.textContent = `${progressPercent}%`;
     if (fillEl) fillEl.style.width = `${progressPercent}%`;
+
+    const totalHours = this.calculateTotalStudyTime();
+    const timeEl = document.getElementById('stat-total-study-time');
+    if (timeEl) timeEl.textContent = `${totalHours} 時間`;
 
     const completedSongs = window.songManager.songs.filter(s => s.status === 'completed').length;
     const completedSongsEl = document.getElementById('stat-completed-songs');
@@ -675,6 +744,7 @@ class AppController {
     this.renderActiveMonthCurriculum();
     this.renderAllIssuesAndLogs();
     this.renderLatestLogs();
+    this.updateDashboardStats();
     alert('学習ログを保存しました！');
   }
 
@@ -700,7 +770,7 @@ class AppController {
   }
 
   copyPromptTemplate() {
-    const promptText = `【本日の1時間作曲学習ログ】\n・対象: Month ${this.activeMonth}\n・タイトル: [Month ${this.activeMonth} Week X Day Y] \n・学習テーマ：\n・学んだ理論・気づき：\n・分析した既存曲：\n・Studio One / ギターでの実践内容：\n・自作曲への応用アイデア：\n\n上記について評価・フィードバックを行い、該当Issueの更新（進捗メモ追記またはコメント追加で「進行中」へ変更、学習完了時は「完了」ラベル付与またはstate:closed）をお願いします。`;
+    const promptText = `【本日の1時間作曲学習ログ】\n・対象: Month ${this.activeMonth}\n・タイトル: [Month ${this.activeMonth} Week X Day Y] \n・学習時間：1.5時間（※実績時間を記入）\n・学習テーマ：\n・学んだ理論・気づき：\n・分析した既存曲：\n・Studio One / ギターでの実践内容：\n・自作曲への応用アイデア：\n\n上記について評価・フィードバックを行い、該当Issueの更新（「- 学習時間: X.X時間」追記、進捗メモ追記で「進行中」へ変更、学習完了時は「完了」ラベル付与またはstate:closed）をお願いします。`;
     navigator.clipboard.writeText(promptText);
     alert('ChatGPT用学習ログプロンプトをコピーしました！');
   }

@@ -95,7 +95,7 @@
     <section id="view-dashboard" class="view-panel active">
       <div class="dashboard-grid">
         <!-- Stat Widgets -->
-        <div class="card col-4">
+        <div class="card col-3">
           <div class="stat-widget">
             <div class="stat-icon cyan"><i class="fa-solid fa-chart-line"></i></div>
             <div>
@@ -108,7 +108,17 @@
           </div>
         </div>
 
-        <div class="card col-4">
+        <div class="card col-3">
+          <div class="stat-widget">
+            <div class="stat-icon amber" style="background: rgba(245, 158, 11, 0.15); color: var(--accent-amber);"><i class="fa-solid fa-hourglass-half fa-spin" style="animation-duration: 12s;"></i></div>
+            <div>
+              <div class="stat-value" id="stat-total-study-time" style="color: var(--accent-amber);">0.0 時間</div>
+              <div class="stat-label">累計総勉強時間 (実績集計)</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card col-3">
           <div class="stat-widget">
             <div class="stat-icon purple"><i class="fa-solid fa-music"></i></div>
             <div>
@@ -118,7 +128,7 @@
           </div>
         </div>
 
-        <div class="card col-4">
+        <div class="card col-3">
           <div class="stat-widget">
             <div class="stat-icon green"><i class="fa-solid fa-bolt"></i></div>
             <div>
