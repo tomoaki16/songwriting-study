@@ -1,5 +1,5 @@
 /**
- * Main Application & SPA Controller with Week 1 Fixed (4h) + Week 2+ Actuals Study Time Calculation
+ * Main Application & SPA Controller with Automatic GitHub-based Curriculum Progress Calculation
  */
 
 class AppController {
@@ -23,7 +23,7 @@ class AppController {
       this.renderActiveMonthCurriculum(); // Re-render curriculum so week-matched issues display!
       this.renderAllIssuesAndLogs();
       this.renderLatestLogs();
-      this.updateDashboardStats();
+      this.updateDashboardStats(); // Recalculate progress percent & study time from real GitHub API
     });
     
     window.songManager.renderSongPipeline('song-pipeline-container');
@@ -497,9 +497,28 @@ class AppController {
   }
 
   updateDashboardStats() {
-    const totalChecked = Object.values(this.checkedTasks).filter(Boolean).length;
+    let completedWeeksCount = 0;
     const totalWeeks = 24;
-    const progressPercent = Math.min(100, Math.round((totalChecked / totalWeeks) * 100));
+
+    if (this.curriculumData && this.curriculumData.months) {
+      this.curriculumData.months.forEach(monthObj => {
+        monthObj.weeks.forEach(w => {
+          const wId = `m${monthObj.month}_w${w.week}`;
+          const isManuallyChecked = !!this.checkedTasks[wId];
+
+          const matchedIssues = this.getIssuesForWeek(monthObj.month, w.week);
+          const hasCompletedIssue = matchedIssues.some(i => this.getIssueStatus(i) === 'completed');
+
+          if (isManuallyChecked || hasCompletedIssue) {
+            completedWeeksCount++;
+          }
+        });
+      });
+    } else {
+      completedWeeksCount = Object.values(this.checkedTasks).filter(Boolean).length;
+    }
+
+    const progressPercent = Math.min(100, Math.round((completedWeeksCount / totalWeeks) * 100));
 
     const percentEl = document.getElementById('overall-progress-percent');
     const fillEl = document.getElementById('overall-progress-fill');
@@ -510,7 +529,7 @@ class AppController {
     const timeEl = document.getElementById('stat-total-study-time');
     if (timeEl) timeEl.textContent = `${totalHours} 時間`;
 
-    const completedSongs = window.songManager.songs.filter(s => s.status === 'completed').length;
+    const completedSongs = window.songManager && window.songManager.songs ? window.songManager.songs.filter(s => s.status === 'completed').length : 0;
     const completedSongsEl = document.getElementById('stat-completed-songs');
     if (completedSongsEl) completedSongsEl.textContent = `${completedSongs} / 5`;
   }
