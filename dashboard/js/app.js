@@ -1,5 +1,5 @@
 /**
- * Main Application & SPA Controller with Refined Study Time Calculation
+ * Main Application & SPA Controller with Week 1 Fixed (4h) + Week 2+ Actuals Study Time Calculation
  */
 
 class AppController {
@@ -231,9 +231,9 @@ class AppController {
   }
 
   /**
-   * Calculate cumulative study time from all active/completed issues and logs.
-   * Parses explicit time expressions (e.g. "学習時間: 1.5時間", "1時間33分", "90分")
-   * and defaults to 1.0 hour for active/completed study issues without explicit notes.
+   * Calculate cumulative study time:
+   * - Week 1: Fixed 4.0 hours total (completed in 4 days, unmeasured individually)
+   * - Week 2+: Parses explicit time notes (e.g. "1時間33分", "1.5h", "90分") or defaults to 1.0h per active/completed daily task.
    */
   calculateTotalStudyTime() {
     const allIssues = [
@@ -247,26 +247,49 @@ class AppController {
     ];
 
     let totalHours = 0;
+    let week1Counted = false;
 
     allIssues.forEach(issue => {
       const status = this.getIssueStatus(issue);
       if (status === 'unstarted') return; // Skip unstarted issues
 
-      const text = `${issue.title || ''} ${issue.body || ''}`;
+      const title = issue.title || '';
+      const body = issue.body || '';
+      const fullText = `${title} ${body}`;
+
+      // Check if this is a Week 1 issue
+      const weekMatch = fullText.match(/\bWeek\s*(\d+)\b/i);
+      const isWeek1 = weekMatch && parseInt(weekMatch[1], 10) === 1;
+
+      if (isWeek1) {
+        if (!week1Counted) {
+          totalHours += 4.0; // Week 1 total fixed at 4.0 hours (completed in 4 days)
+          week1Counted = true;
+        }
+        return;
+      }
+
+      // Skip weekly overview container issues without Day number
+      const isWeeklyOverviewContainer = title.includes('週次目標') || (title.includes('Week') && !title.includes('Day') && !title.includes('Review') && !title.includes('振り返り'));
+      if (isWeeklyOverviewContainer && !fullText.includes('時間') && !fullText.includes('分')) {
+        return;
+      }
+
+      // Parse explicit time notes for Week 2+
       let hoursFound = 0;
 
-      // Pattern 1: X時間Y分 (e.g. 1時間33分, 1時間57分)
-      const comboMatch = text.match(/(?:学習時間|勉強時間|作業時間|所要時間|実績|タイム)?[：:\s=]*(\d+(?:\.\d+)?)\s*時間\s*(\d+)\s*分/i);
+      // Pattern 1: Combined X時間Y分 (e.g. 1時間33分, 1時間57分)
+      const comboMatch = fullText.match(/(?:学習時間|勉強時間|作業時間|所要時間|実績|タイム)?[：:\s=]*(\d+(?:\.\d+)?)\s*時間\s*(\d+)\s*分/i);
       if (comboMatch) {
         hoursFound = parseFloat(comboMatch[1]) + (parseInt(comboMatch[2], 10) / 60);
       } else {
         // Pattern 2: X時間 or X.X時間 or Xh
-        const hourMatch = text.match(/(?:学習時間|勉強時間|作業時間|所要時間|時間|タイム|実績)[：:\s=]*(\d+(?:\.\d+)?)\s*(?:時間|h|hrs?|hours?)/i);
+        const hourMatch = fullText.match(/(?:学習時間|勉強時間|作業時間|所要時間|時間|タイム|実績)[：:\s=]*(\d+(?:\.\d+)?)\s*(?:時間|h|hrs?|hours?)/i);
         if (hourMatch) {
           hoursFound = parseFloat(hourMatch[1]);
         } else {
           // Pattern 3: Explicit X分 (requires keyword like 学習時間/作業時間/所要時間)
-          const minMatch = text.match(/(?:学習時間|勉強時間|作業時間|所要時間|タイム|実績)[：:\s=]*(\d+)\s*(?:分|m|mins?)/i);
+          const minMatch = fullText.match(/(?:学習時間|勉強時間|作業時間|所要時間|タイム|実績)[：:\s=]*(\d+)\s*(?:分|m|mins?)/i);
           if (minMatch) {
             hoursFound = parseInt(minMatch[1], 10) / 60;
           }
@@ -276,7 +299,7 @@ class AppController {
       if (hoursFound > 0) {
         totalHours += hoursFound;
       } else if (status === 'completed' || status === 'in_progress') {
-        // Default baseline: 1.0 hour per active/completed study task issue
+        // Default baseline: 1.0 hour per active/completed daily study task
         totalHours += 1.0;
       }
     });
