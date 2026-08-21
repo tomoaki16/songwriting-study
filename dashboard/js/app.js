@@ -1,5 +1,5 @@
 /**
- * Main Application & SPA Controller with Strict Week-Issue Matching, Chronological Sorting, and Cumulative Study Time Calculation
+ * Main Application & SPA Controller with Refined Study Time Calculation
  */
 
 class AppController {
@@ -232,7 +232,7 @@ class AppController {
 
   /**
    * Calculate cumulative study time from all active/completed issues and logs.
-   * Parses explicit time expressions (e.g. "学習時間: 1.5時間", "90分", "2h30m")
+   * Parses explicit time expressions (e.g. "学習時間: 1.5時間", "1時間33分", "90分")
    * and defaults to 1.0 hour for active/completed study issues without explicit notes.
    */
   calculateTotalStudyTime() {
@@ -255,20 +255,18 @@ class AppController {
       const text = `${issue.title || ''} ${issue.body || ''}`;
       let hoursFound = 0;
 
-      // Pattern 1: X時間Y分 (e.g. 1時間30分, 2時間15分)
-      const comboMatch = text.match(/(\d+(?:\.\d+)?)\s*時間\s*(\d+)\s*分/i);
+      // Pattern 1: X時間Y分 (e.g. 1時間33分, 1時間57分)
+      const comboMatch = text.match(/(?:学習時間|勉強時間|作業時間|所要時間|実績|タイム)?[：:\s=]*(\d+(?:\.\d+)?)\s*時間\s*(\d+)\s*分/i);
       if (comboMatch) {
         hoursFound = parseFloat(comboMatch[1]) + (parseInt(comboMatch[2], 10) / 60);
       } else {
-        // Pattern 2: X時間 or X.X時間 or Xh or X.Xh
-        const hourMatch = text.match(/(?:学習時間|勉強時間|作業時間|時間|タイム|実績)[：:\s=]*(\d+(?:\.\d+)?)\s*(?:時間|h|hrs?|hours?)/i) ||
-                          text.match(/(\d+(?:\.\d+)?)\s*(?:時間|h|hrs?)/i);
+        // Pattern 2: X時間 or X.X時間 or Xh
+        const hourMatch = text.match(/(?:学習時間|勉強時間|作業時間|所要時間|時間|タイム|実績)[：:\s=]*(\d+(?:\.\d+)?)\s*(?:時間|h|hrs?|hours?)/i);
         if (hourMatch) {
           hoursFound = parseFloat(hourMatch[1]);
         } else {
-          // Pattern 3: X分 or Xmins
-          const minMatch = text.match(/(?:学習時間|勉強時間|作業時間|時間|タイム|実績)[：:\s=]*(\d+)\s*(?:分|m|mins?)/i) ||
-                           text.match(/(\d+)\s*(?:分|mins?)/i);
+          // Pattern 3: Explicit X分 (requires keyword like 学習時間/作業時間/所要時間)
+          const minMatch = text.match(/(?:学習時間|勉強時間|作業時間|所要時間|タイム|実績)[：:\s=]*(\d+)\s*(?:分|m|mins?)/i);
           if (minMatch) {
             hoursFound = parseInt(minMatch[1], 10) / 60;
           }
@@ -278,7 +276,7 @@ class AppController {
       if (hoursFound > 0) {
         totalHours += hoursFound;
       } else if (status === 'completed' || status === 'in_progress') {
-        // Baseline fallback: 1.0 hour per active/completed study task issue
+        // Default baseline: 1.0 hour per active/completed study task issue
         totalHours += 1.0;
       }
     });
