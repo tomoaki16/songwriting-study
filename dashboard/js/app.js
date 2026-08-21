@@ -1,5 +1,5 @@
 /**
- * Main Application & SPA Controller with Automatic GitHub-based Curriculum Progress Calculation
+ * Main Application & SPA Controller with Weighted Progress Percentage Calculation
  */
 
 class AppController {
@@ -497,28 +497,36 @@ class AppController {
   }
 
   updateDashboardStats() {
-    let completedWeeksCount = 0;
+    let totalWeekPercentageSum = 0;
     const totalWeeks = 24;
 
     if (this.curriculumData && this.curriculumData.months) {
       this.curriculumData.months.forEach(monthObj => {
         monthObj.weeks.forEach(w => {
           const wId = `m${monthObj.month}_w${w.week}`;
-          const isManuallyChecked = !!this.checkedTasks[wId];
+          
+          // Check 1: Manual task checkbox in localStorage (counts as 100%)
+          if (this.checkedTasks[wId]) {
+            totalWeekPercentageSum += 100;
+            return;
+          }
 
+          // Check 2: Weighted percentage from actual GitHub issues completed for this week
           const matchedIssues = this.getIssuesForWeek(monthObj.month, w.week);
-          const hasCompletedIssue = matchedIssues.some(i => this.getIssueStatus(i) === 'completed');
-
-          if (isManuallyChecked || hasCompletedIssue) {
-            completedWeeksCount++;
+          if (matchedIssues.length > 0) {
+            const completedCount = matchedIssues.filter(i => this.getIssueStatus(i) === 'completed').length;
+            const weekPercent = Math.round((completedCount / matchedIssues.length) * 100);
+            totalWeekPercentageSum += weekPercent;
           }
         });
       });
     } else {
-      completedWeeksCount = Object.values(this.checkedTasks).filter(Boolean).length;
+      const checkedCount = Object.values(this.checkedTasks).filter(Boolean).length;
+      totalWeekPercentageSum = checkedCount * 100;
     }
 
-    const progressPercent = Math.min(100, Math.round((completedWeeksCount / totalWeeks) * 100));
+    // Exact weighted progress percent across all 24 weeks
+    const progressPercent = Math.min(100, Math.round(totalWeekPercentageSum / totalWeeks));
 
     const percentEl = document.getElementById('overall-progress-percent');
     const fillEl = document.getElementById('overall-progress-fill');
