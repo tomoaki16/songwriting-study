@@ -1,21 +1,33 @@
 /**
  * Curriculum State Helper Module
- * Also manages study-day metrics shown on the dashboard.
+ * Manages study-day and cumulative study-time metrics shown on the dashboard.
  */
 class CurriculumHelper {
   constructor() {
     this.name = 'CurriculumHelper';
     this.studyDayData = { startDate: '2026-08-16', studyDates: [] };
+    this.studyTimeData = {
+      baselineThroughDate: '2026-08-25',
+      baselineMinutes: 900,
+      baselineLabel: '約15時間'
+    };
   }
 
   async loadStudyDayData() {
     try {
       const response = await fetch('data/study-days.json', { cache: 'no-store' });
-      if (response.ok) {
-        this.studyDayData = await response.json();
-      }
+      if (response.ok) this.studyDayData = await response.json();
     } catch (error) {
       console.warn('study-days.json の読み込みに失敗しました:', error);
+    }
+  }
+
+  async loadStudyTimeData() {
+    try {
+      const response = await fetch('data/study-time.json', { cache: 'no-store' });
+      if (response.ok) this.studyTimeData = await response.json();
+    } catch (error) {
+      console.warn('study-time.json の読み込みに失敗しました:', error);
     }
   }
 
@@ -46,20 +58,21 @@ class CurriculumHelper {
     return Math.max(1, Math.floor(diff / 86400000) + 1);
   }
 
-  collectStudyDatesFromIssues() {
-    const dates = new Set(this.studyDayData.studyDates || []);
-    const items = [
+  getAllStudyItems() {
+    return [
       ...(window.githubManager?.issues || []),
       ...(window.app?.localDailyLogs || [])
     ];
+  }
 
-    items.forEach(item => {
+  collectStudyDatesFromIssues() {
+    const dates = new Set(this.studyDayData.studyDates || []);
+
+    this.getAllStudyItems().forEach(item => {
       const text = `${item.title || ''}\n${item.body || ''}`;
       const regex = /学習日\s*[:：]\s*(\d{4}-\d{2}-\d{2})/g;
       let match;
-      while ((match = regex.exec(text)) !== null) {
-        dates.add(match[1]);
-      }
+      while ((match = regex.exec(text)) !== null) dates.add(match[1]);
     });
 
     return [...dates].sort();
@@ -67,6 +80,42 @@ class CurriculumHelper {
 
   getStudyDayCount() {
     return this.collectStudyDatesFromIssues().length;
+  }
+
+  collectDailyStudyMinutesAfterBaseline() {
+    const baselineDate = this.studyTimeData.baselineThroughDate || '2026-08-25';
+    const dailyMinutes = new Map();
+
+    this.getAllStudyItems().forEach(item => {
+      const text = `${item.title || ''}\n${item.body || ''}`;
+      const dateMatches = [...text.matchAll(/学習日\s*[:：]\s*(\d{4}-\d{2}-\d{2})/g)];
+      const minuteMatches = [...text.matchAll(/日次学習時間\s*[:：]\s*(\d+)\s*分/g)];
+      if (dateMatches.length === 0 || minuteMatches.length === 0) return;
+
+      const count = Math.min(dateMatches.length, minuteMatches.length);
+      for (let i = 0; i < count; i += 1) {
+        const date = dateMatches[i][1];
+        const minutes = parseInt(minuteMatches[i][1], 10);
+        if (!Number.isFinite(minutes) || minutes <= 0 || date <= baselineDate) continue;
+
+        // One daily total per calendar date. If duplicated accidentally, keep the largest value
+        // rather than adding Issue-level entries together.
+        dailyMinutes.set(date, Math.max(dailyMinutes.get(date) || 0, minutes));
+      }
+    });
+
+    return dailyMinutes;
+  }
+
+  getTotalStudyMinutes() {
+    const baseline = Number(this.studyTimeData.baselineMinutes) || 0;
+    const additional = [...this.collectDailyStudyMinutesAfterBaseline().values()]
+      .reduce((sum, minutes) => sum + minutes, 0);
+    return baseline + additional;
+  }
+
+  getTotalStudyHours() {
+    return Math.round((this.getTotalStudyMinutes() / 60) * 10) / 10;
   }
 
   ensureStudyDayCard() {
@@ -91,9 +140,11 @@ class CurriculumHelper {
     this.ensureStudyDayCard();
     const studyDaysEl = document.getElementById('stat-study-days');
     const elapsedDaysEl = document.getElementById('stat-elapsed-days');
+    const totalTimeEl = document.getElementById('stat-total-study-time');
 
     if (studyDaysEl) studyDaysEl.textContent = `${this.getStudyDayCount()}日`;
     if (elapsedDaysEl) elapsedDaysEl.textContent = `開始から${this.getElapsedDayNumber()}日目`;
+    if (totalTimeEl) totalTimeEl.textContent = `${this.getTotalStudyHours()} 時間`;
   }
 
   ensureStudyDateInBody(body) {
@@ -103,6 +154,9 @@ class CurriculumHelper {
 
   installAppHooks() {
     if (!window.app) return;
+
+    // Replace the old per-Issue estimate entirely. No 1-hour fallback is allowed.
+    window.app.calculateTotalStudyTime = () => this.getTotalStudyHours();
 
     const originalUpdateDashboardStats = window.app.updateDashboardStats.bind(window.app);
     window.app.updateDashboardStats = (...args) => {
@@ -116,7 +170,7 @@ class CurriculumHelper {
       const result = originalOpenPromptModal(...args);
       const area = document.getElementById('prompt-template-area');
       if (area) {
-        area.value = `【本日の1時間作曲学習ログ】\n・学習日: ${this.getTodayInJapan()}\n・対象: Month ${window.app.activeMonth} Week X Day Y\n・タイトル: [Month ${window.app.activeMonth} Week X Day Y]\n・学習時間：1.0時間（※実績時間を記入）\n・学習テーマ：\n・学んだ理論・気づき：\n・分析した既存曲：\n・Studio One / ギターでの実践内容：\n・自作曲への応用アイデア：\n\n上記について評価・フィードバックを行い、該当Issueの登録・更新をお願いします。Issue本文には必ず「学習日: YYYY-MM-DD」を残してください。同じ日に複数Issueを進めても学習日数は1日として扱います。`;
+        area.value = `【本日の1時間作曲学習ログ】\n・学習日: ${this.getTodayInJapan()}\n・日次学習時間: XX分（その日の全学習が終わった時点の合計を、1日1回だけ記入）\n・対象: Month ${window.app.activeMonth} Week X Day Y\n・タイトル: [Month ${window.app.activeMonth} Week X Day Y]\n・学習テーマ：\n・学んだ理論・気づき：\n・分析した既存曲：\n・Studio One / ギターでの実践内容：\n・自作曲への応用アイデア：\n\n上記について評価・フィードバックを行い、該当Issueの登録・更新をお願いします。Issue本文には必ず「学習日: YYYY-MM-DD」を残してください。「日次学習時間: XX分」は、その日の最後に更新するIssueの本文へ1日1回だけ記録してください。同じ日に複数Issueを進めても学習日数・学習時間を重複加算しません。`;
       }
       return result;
     };
@@ -145,13 +199,14 @@ class CurriculumHelper {
   }
 
   async init() {
-    await this.loadStudyDayData();
+    await Promise.all([this.loadStudyDayData(), this.loadStudyTimeData()]);
     this.ensureStudyDayCard();
     this.updateStudyDayStats();
 
     // app.js is loaded after this file, so install hooks after DOMContentLoaded handlers finish.
     setTimeout(() => {
       this.installAppHooks();
+      window.app?.updateDashboardStats();
       this.updateStudyDayStats();
     }, 0);
   }
