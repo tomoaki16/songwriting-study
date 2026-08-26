@@ -1,0 +1,6 @@
+{
+  "baselineThroughDate": "2026-08-25",
+  "baselineMinutes": 900,
+  "baselineLabel": "約15時間",
+  "note": "2026-08-25終了時点の累計学習時間を約15時間として基準化。以後はIssue本文の学習日 + 日次学習時間を日付単位で重複除外して加算する。"
+}
