@@ -8,8 +8,8 @@ class CurriculumHelper {
     this.studyDayData = { startDate: '2026-08-16', studyDates: [] };
     this.studyTimeData = {
       baselineThroughDate: '2026-08-25',
-      baselineMinutes: 900,
-      baselineLabel: '約15時間'
+      baselineMinutes: 756,
+      baselineLabel: '12時間36分'
     };
   }
 
